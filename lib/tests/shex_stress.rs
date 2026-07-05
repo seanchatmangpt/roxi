@@ -272,3 +272,81 @@ fn test_shex_validates_decimal_boolean_date_datatypes() {
         );
     }
 }
+
+/// Counterfactual: ShapeOr/ShapeAnd/ShapeNot combinators over two disjoint
+/// facet-constrained branches (short strings vs long strings). Confirms:
+/// OR rejects a value satisfying NEITHER branch (not just "at least one
+/// somewhere"), AND rejects a value satisfying only ONE of two required
+/// branches (not conflating AND with OR), and NOT correctly inverts (a
+/// value that fails the inner shape must conform to its negation, and vice
+/// versa). The vendored W3C shexTest suite exercises these combinators
+/// structurally already, but not with this direct, explicit boundary
+/// framing against a hand-controlled value set.
+#[test]
+fn test_shape_or_and_not_combinators_counterfactual() {
+    // ShapeOr: value must be EITHER length<=3 OR length>=10. A mid-length
+    // value (length 5) satisfies neither branch and must be rejected.
+    let or_schema = r#"{
+      "@context": "http://www.w3.org/ns/shex.jsonld",
+      "type": "Schema",
+      "shapes": [{
+        "type": "ShapeDecl", "id": "http://example.org/OrShape",
+        "shapeExpr": { "type": "ShapeOr", "shapeExprs": [
+          { "type": "Shape", "expression": { "type": "TripleConstraint", "predicate": "http://example.org/val",
+            "valueExpr": { "type": "NodeConstraint", "maxlength": 3 } } },
+          { "type": "Shape", "expression": { "type": "TripleConstraint", "predicate": "http://example.org/val",
+            "valueExpr": { "type": "NodeConstraint", "minlength": 10 } } }
+        ] }
+      }]
+    }"#;
+    for (value, should_conform) in [("ab", true), ("abcdefghijk", true), ("abcde", false)] {
+        let data = build_data_index(&format!(r#"<http://example.org/n> <http://example.org/val> "{value}" ."#));
+        let shape_map = vec![("http://example.org/n".to_string(), "http://example.org/OrShape".to_string())];
+        let report = validate_shex(&data, or_schema, &shape_map).unwrap();
+        assert_eq!(report.conforms, should_conform, "ShapeOr: {:?} (len {}) expected conforms={}, got {}", value, value.len(), should_conform, report.conforms);
+    }
+
+    // ShapeAnd: value must satisfy BOTH minlength>=3 AND maxlength<=8. A
+    // value satisfying only one branch (too short, or too long) must be
+    // rejected -- not accepted just because it matches one conjunct.
+    let and_schema = r#"{
+      "@context": "http://www.w3.org/ns/shex.jsonld",
+      "type": "Schema",
+      "shapes": [{
+        "type": "ShapeDecl", "id": "http://example.org/AndShape",
+        "shapeExpr": { "type": "ShapeAnd", "shapeExprs": [
+          { "type": "Shape", "expression": { "type": "TripleConstraint", "predicate": "http://example.org/val",
+            "valueExpr": { "type": "NodeConstraint", "minlength": 3 } } },
+          { "type": "Shape", "expression": { "type": "TripleConstraint", "predicate": "http://example.org/val",
+            "valueExpr": { "type": "NodeConstraint", "maxlength": 8 } } }
+        ] }
+      }]
+    }"#;
+    for (value, should_conform) in [("ab", false), ("abcde", true), ("abcdefghij", false)] {
+        let data = build_data_index(&format!(r#"<http://example.org/n> <http://example.org/val> "{value}" ."#));
+        let shape_map = vec![("http://example.org/n".to_string(), "http://example.org/AndShape".to_string())];
+        let report = validate_shex(&data, and_schema, &shape_map).unwrap();
+        assert_eq!(report.conforms, should_conform, "ShapeAnd: {:?} (len {}) expected conforms={}, got {}", value, value.len(), should_conform, report.conforms);
+    }
+
+    // ShapeNot: negates a maxlength<=3 inner shape. A value that fails the
+    // inner shape (too long) must conform to the negation; a value that
+    // satisfies the inner shape must NOT conform to the negation.
+    let not_schema = r#"{
+      "@context": "http://www.w3.org/ns/shex.jsonld",
+      "type": "Schema",
+      "shapes": [{
+        "type": "ShapeDecl", "id": "http://example.org/NotShape",
+        "shapeExpr": { "type": "ShapeNot", "shapeExpr":
+          { "type": "Shape", "expression": { "type": "TripleConstraint", "predicate": "http://example.org/val",
+            "valueExpr": { "type": "NodeConstraint", "maxlength": 3 } } }
+        }
+      }]
+    }"#;
+    for (value, should_conform) in [("ab", false), ("abcdefgh", true)] {
+        let data = build_data_index(&format!(r#"<http://example.org/n> <http://example.org/val> "{value}" ."#));
+        let shape_map = vec![("http://example.org/n".to_string(), "http://example.org/NotShape".to_string())];
+        let report = validate_shex(&data, not_schema, &shape_map).unwrap();
+        assert_eq!(report.conforms, should_conform, "ShapeNot: {:?} (len {}) expected conforms={}, got {}", value, value.len(), should_conform, report.conforms);
+    }
+}

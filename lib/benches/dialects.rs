@@ -53,6 +53,9 @@ fn shacl_validate_100(bench: &mut Bencher) {
 fn shacl_validate_1000(bench: &mut Bencher) {
     shacl_validate_n(bench, 1000);
 }
+fn shacl_validate_5000(bench: &mut Bencher) {
+    shacl_validate_n(bench, 5000);
+}
 
 // ---------------------------------------------------------------------
 // ShEx: validate N focus nodes against a single-datatype-constraint shape.
@@ -87,6 +90,9 @@ fn shex_validate_100(bench: &mut Bencher) {
 fn shex_validate_1000(bench: &mut Bencher) {
     shex_validate_n(bench, 1000);
 }
+fn shex_validate_5000(bench: &mut Bencher) {
+    shex_validate_n(bench, 5000);
+}
 
 // ---------------------------------------------------------------------
 // N3: forward-chain a linear rdfs:subClassOf-style transitivity chain of
@@ -120,6 +126,9 @@ fn n3_chain_depth_50(bench: &mut Bencher) {
 }
 fn n3_chain_depth_150(bench: &mut Bencher) {
     n3_chain_n(bench, 150);
+}
+fn n3_chain_depth_400(bench: &mut Bencher) {
+    n3_chain_n(bench, 400);
 }
 
 // ---------------------------------------------------------------------
@@ -163,6 +172,9 @@ fn datalog_stratify_layers_20(bench: &mut Bencher) {
 }
 fn datalog_stratify_layers_50(bench: &mut Bencher) {
     datalog_stratify_n(bench, 50);
+}
+fn datalog_stratify_layers_200(bench: &mut Bencher) {
+    datalog_stratify_n(bench, 200);
 }
 
 // ---------------------------------------------------------------------
@@ -208,12 +220,16 @@ benchmark_group!(
     dialect_benches,
     shacl_validate_100,
     shacl_validate_1000,
+    shacl_validate_5000,
     shex_validate_100,
     shex_validate_1000,
+    shex_validate_5000,
     n3_chain_depth_50,
     n3_chain_depth_150,
+    n3_chain_depth_400,
     datalog_stratify_layers_20,
     datalog_stratify_layers_50,
+    datalog_stratify_layers_200,
     datalog_aggregate_facts_1000,
 );
 benchmark_main!(dialect_benches);

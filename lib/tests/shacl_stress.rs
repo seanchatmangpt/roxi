@@ -201,3 +201,163 @@ fn test_large_scale_validation_1000_focus_nodes() {
         elapsed
     );
 }
+
+/// Counterfactual: sh:minInclusive/minExclusive/maxInclusive/maxExclusive at
+/// their exact boundary values. Inclusive bounds must accept the boundary
+/// itself; exclusive bounds must reject it. Mirrors the equivalent ShEx
+/// boundary test (`shex_stress.rs::test_counterfactual_numeric_range_exact_boundary`)
+/// but was previously untested on the SHACL side.
+#[test]
+fn test_counterfactual_numeric_range_exact_boundary() {
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:InclusiveShape a sh:NodeShape ;
+            sh:targetClass ex:InclusiveItem ;
+            sh:property [ sh:path ex:value ; sh:minInclusive 0 ; sh:maxInclusive 100 ] .
+
+        ex:ExclusiveShape a sh:NodeShape ;
+            sh:targetClass ex:ExclusiveItem ;
+            sh:property [ sh:path ex:value ; sh:minExclusive 0 ; sh:maxExclusive 100 ] .
+    "#;
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+
+    for (value, should_conform) in [(-1, false), (0, true), (50, true), (100, true), (101, false)] {
+        let data = build_data_index(&format!(
+            "@prefix ex: <http://example.org/> .\nex:i a ex:InclusiveItem ; ex:value {value} .\n"
+        ));
+        let report = Validator::validate(&data, &shapes);
+        assert_eq!(
+            report.conforms, should_conform,
+            "inclusive range: value={} against [0,100] inclusive: expected conforms={}, got {}",
+            value, should_conform, report.conforms
+        );
+    }
+
+    for (value, should_conform) in [(-1, false), (0, false), (1, true), (99, true), (100, false), (101, false)] {
+        let data = build_data_index(&format!(
+            "@prefix ex: <http://example.org/> .\nex:e a ex:ExclusiveItem ; ex:value {value} .\n"
+        ));
+        let report = Validator::validate(&data, &shapes);
+        assert_eq!(
+            report.conforms, should_conform,
+            "exclusive range: value={} against (0,100) exclusive: expected conforms={}, got {}",
+            value, should_conform, report.conforms
+        );
+    }
+}
+
+/// Type/lexical edge case: comparing an `xsd:dateTime` WITH an explicit
+/// timezone against one WITHOUT a timezone is, per XSD's partial order,
+/// "indeterminate" (the result depends on which of the +/-14:00 extremes is
+/// assumed) -- this crate treats indeterminate comparisons as "constraint
+/// not satisfied", matching the real W3C SHACL test suite
+/// (minInclusive-002/003, vendored in shacl_conformance/). This test
+/// isolates that behavior directly rather than relying only on the
+/// vendored suite to exercise it.
+#[test]
+fn test_datetime_timezone_mismatch_is_indeterminate_and_violates() {
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+        ex:TestShape a sh:NodeShape ;
+            sh:minInclusive "2002-10-10T12:00:00-05:00"^^xsd:dateTime ;
+            sh:targetNode "2002-10-10T12:00:00-05:00"^^xsd:dateTime ,
+                          "2002-10-10T12:00:01-05:00"^^xsd:dateTime ,
+                          "2002-10-09T12:00:00-05:00"^^xsd:dateTime ,
+                          "2002-10-10T12:00:00"^^xsd:dateTime .
+    "#;
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+    let data = build_data_index("@prefix ex: <http://example.org/> .\n");
+    let report = Validator::validate(&data, &shapes);
+
+    let violated: std::collections::HashSet<String> =
+        report.results.iter().map(|r| r.focus_node.to_string()).collect();
+
+    assert_eq!(
+        violated.len(), 2,
+        "expected exactly 2 violations (the earlier date, and the timezone-less indeterminate value), got: {:?}", violated
+    );
+    assert!(
+        !violated.iter().any(|v| v.contains("2002-10-10T12:00:00-05:00")),
+        "same-tz value equal to the bound must conform (no violation), got: {:?}", violated
+    );
+    assert!(
+        !violated.iter().any(|v| v.contains("2002-10-10T12:00:01-05:00")),
+        "same-tz value greater than the bound must conform (no violation), got: {:?}", violated
+    );
+    assert!(
+        violated.iter().any(|v| v.contains("2002-10-09T12:00:00-05:00")),
+        "same-tz value less than the bound must violate, got: {:?}", violated
+    );
+    assert!(
+        violated.iter().any(|v| v == "\"2002-10-10T12:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>"),
+        "a timezone-less value compared against a timezone-qualified bound is indeterminate and must violate (not silently pass), got: {:?}", violated
+    );
+}
+
+/// Stress: 3 levels of nested sh:property (a property shape whose value's
+/// own property shape has a further nested property shape), confirming the
+/// recursive `validate_property_shape` handles depth beyond the 1-level
+/// case the W3C suite's `property/property-001.ttl` exercises, and that
+/// `sh:resultPath`/`sh:focusNode` stay correctly anchored at each level
+/// rather than collapsing to the top-level focus node.
+#[test]
+fn test_three_level_nested_property_shape() {
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:CompanyShape a sh:NodeShape ;
+            sh:targetClass ex:Company ;
+            sh:property [
+                sh:path ex:address ;
+                sh:property [
+                    sh:path ex:city ;
+                    sh:property [
+                        sh:path ex:country ;
+                        sh:class ex:Country ;
+                    ] ;
+                ] ;
+            ] .
+    "#;
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+
+    // Valid chain: Company -> address -> city -> country (of the right class).
+    let data_valid = build_data_index(
+        r#"
+        @prefix ex: <http://example.org/> .
+        ex:acme a ex:Company ; ex:address ex:acmeAddr .
+        ex:acmeAddr ex:city ex:acmeCity .
+        ex:acmeCity ex:country ex:Wakanda .
+        ex:Wakanda a ex:Country .
+    "#,
+    );
+    let report_valid = Validator::validate(&data_valid, &shapes);
+    assert!(report_valid.conforms, "a fully valid 3-level chain must conform, got violations: {:?}", report_valid.results);
+
+    // Break the constraint at the deepest (3rd) level: country is not a ex:Country.
+    let data_invalid = build_data_index(
+        r#"
+        @prefix ex: <http://example.org/> .
+        ex:acme a ex:Company ; ex:address ex:acmeAddr .
+        ex:acmeAddr ex:city ex:acmeCity .
+        ex:acmeCity ex:country ex:NotACountry .
+    "#,
+    );
+    let report_invalid = Validator::validate(&data_invalid, &shapes);
+    assert!(!report_invalid.conforms, "a violation 3 levels deep must still be caught, not silently swallowed by the recursion");
+    assert_eq!(
+        report_invalid.results.len(), 1,
+        "expected exactly 1 violation from the deepest nesting level, got: {:?}", report_invalid.results
+    );
+    let violation = &report_invalid.results[0];
+    assert_eq!(
+        violation.focus_node.to_string().contains("acmeCity"), true,
+        "the violation's focus_node must be anchored at the 3rd-level value (ex:acmeCity), not the top-level ex:acme, got: {}",
+        violation.focus_node.to_string()
+    );
+}

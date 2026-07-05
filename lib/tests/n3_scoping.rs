@@ -123,3 +123,36 @@ fn test_chained_implication_through_log_implies_then_ordinary_rule() {
         decoded
     );
 }
+
+/// Chained `log:implies -> log:implies`: the fact dynamically derived by a
+/// FIRST log:implies-reified rule must itself be able to satisfy a SECOND,
+/// independent log:implies rule's quoted antecedent -- not just feed an
+/// ordinary rule's plain body literal (already covered above). This
+/// confirms dynamic formula reification composes with itself across
+/// multiple fixpoint iterations, not only with static rules.
+#[test]
+fn test_chained_log_implies_through_two_independent_implies_rules() {
+    let data = "@prefix : <http://example.org/> .\n\
+                @prefix log: <http://www.w3.org/2000/10/swap/log#> .\n\
+                \n\
+                :bob a :GoodCitizen .\n\
+                :alice :says { ?citizen a :GoodCitizen } .\n\
+                :carol :alsoSays { ?p a :TaxPayer } .\n\
+                { ?speaker :says ?formula . ?formula log:implies { ?citizen a :TaxPayer } } => { ?citizen a :TaxPayer }.\n\
+                { ?speaker2 :alsoSays ?formula2 . ?formula2 log:implies { ?p :owes :Taxes } } => { ?p :owes :Taxes }.\n";
+
+    let mut store = TripleStore::from(data);
+    let inferred = store.materialize();
+    let decoded = decode_all(&inferred);
+
+    assert!(
+        decoded.iter().any(|d| d.contains("/bob") && d.contains("TaxPayer")),
+        "expected :bob a :TaxPayer via the FIRST log:implies rule. Derived: {:?}",
+        decoded
+    );
+    assert!(
+        decoded.iter().any(|d| d.contains("/bob") && d.contains("owes") && d.contains("Taxes")),
+        "expected :bob :owes :Taxes via the SECOND log:implies rule, whose quoted antecedent ({{ ?p a :TaxPayer }}) matches the fact dynamically derived by the FIRST log:implies rule -- not a statically-asserted fact. Derived: {:?}",
+        decoded
+    );
+}
