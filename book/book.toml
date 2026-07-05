@@ -1,0 +1,6 @@
+[book]
+authors = ["DeepMind Antigravity Team"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Roxi RDF Engine — Developer Guide & Reference"

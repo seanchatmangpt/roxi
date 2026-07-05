@@ -1,0 +1,55 @@
+diff --git a/lib/src/lib.rs b/lib/src/lib.rs
+index 32709e3..f01bde2 100644
+--- a/lib/src/lib.rs
++++ b/lib/src/lib.rs
+@@ -19,6 +19,7 @@ pub mod ruleindex;
+ mod service_composition;
+ pub mod sparql;
+ pub mod time_window;
+ pub mod tripleindex;
++pub mod oxrdf_adapter;
+ pub mod triples;
+ pub mod utils;
+ 
+diff --git a/lib/src/triples.rs b/lib/src/triples.rs
+index a6198f3..c5f11b2 100644
+--- a/lib/src/triples.rs
++++ b/lib/src/triples.rs
+@@ -85,5 +85,15 @@ impl VarOrTerm {
+             VarOrTerm::new_term(iri_prefix)
+         }
+     }
++
++    pub fn new_literal(value: String, datatype: Option<String>, lang: Option<String>) -> VarOrTerm {
++        let id = Encoder::add_literal(value, datatype, lang);
++        let term = Encoder::decode_to_term(id).expect("Successfully decoded just-added literal");
++        VarOrTerm::Term(term)
++    }
++
++    pub fn new_blank_node(label: String) -> VarOrTerm {
++        let id = Encoder::add_blank_node(label);
++        let term = Encoder::decode_to_term(id).expect("Successfully decoded just-added blank node");
++        VarOrTerm::Term(term)
++    }
+ }
+ 
+diff --git a/lib/tests/oxrdf_adapter.rs b/lib/tests/oxrdf_adapter.rs
+index b2861a4..be63cc0 100644
+--- a/lib/tests/oxrdf_adapter.rs
++++ b/lib/tests/oxrdf_adapter.rs
+@@ -7,9 +7,7 @@
+ // (TICKET-001 and TICKET-007) are not yet implemented. Uncomment these tests and the imports
+ // once the adapter is implemented.
+ 
+-/*
+ use minimal::tripleindex::TripleIndex;
+ use minimal::triples::{Triple, VarOrTerm};
+-// TODO: uncomment these once the adapter is implemented
+-// use minimal::oxrdf_adapter::{triple_index_to_oxrdf_graph, oxrdf_term_to_roxi_term};
++use minimal::oxrdf_adapter::{triple_index_to_oxrdf_graph, oxrdf_term_to_roxi_term};
+ use oxrdf::{Graph, NamedNode, Literal, BlankNode, Term, Subject};
+@@ -115,4 +113,3 @@ fn test_blank_node_identity_preserved() {
+         panic!("Expected blank node object");
+     }
+ }
+-*/

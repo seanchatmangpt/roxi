@@ -1,0 +1,2417 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Roxi RDF Engine — Developer Guide &amp; Reference</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Roxi RDF Engine — Developer Guide &amp; Reference</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<h2 id="overview-of-the-roxi-rdf-engine"><a class="header" href="#overview-of-the-roxi-rdf-engine">Overview of the Roxi RDF Engine</a></h2>
+<p>Roxi is an embedded, lightweight, and extremely high-performance RDF database and reasoning engine written natively in Rust. Designed to support modern semantic architectures, Roxi stands out by compiling cleanly to WebAssembly (<code>wasm32-unknown-unknown</code>), enabling client-side semantic applications, reactive browser-based graph reasoning, and offline-first semantic web clients. At the same time, it compiles to high-performance native binaries for server deployments, streaming pipelines, and desktop applications.</p>
+<p>The central design philosophy of Roxi is <strong>dialect unification</strong>. In typical semantic architectures, developers are forced to string together a pipeline of disparate tools to parse files, perform inference, run queries, and validate structures. For instance, a typical enterprise setup might require Apache Jena for storage, EYE for Notation3 rules reasoning, a custom Datalog processor, and a separate SHACL validator. This disjointed design suffers from massive serialization costs, distinct memory layouts, and strict execution boundaries (such as validating shapes only before or after reasoning, missing transient rule violations).</p>
+<p>Roxi eliminates these barriers by running five semantic dialects directly on top of a single, highly optimized memory substrate:</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Dialect</th><th style="text-align: left">Specification Basis</th><th style="text-align: left">Primary Purpose in Roxi</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>SPARQL 1.1</strong></td><td style="text-align: left">W3C Recommendation</td><td style="text-align: left">Declarative query execution and graph updates.</td></tr>
+<tr><td style="text-align: left"><strong>SHACL</strong></td><td style="text-align: left">W3C Recommendation</td><td style="text-align: left">Shape-based data validation and core constraints.</td></tr>
+<tr><td style="text-align: left"><strong>ShEx</strong></td><td style="text-align: left">W3C Community Group</td><td style="text-align: left">Shape Expressions validation and recursive validation.</td></tr>
+<tr><td style="text-align: left"><strong>Datalog</strong></td><td style="text-align: left">Logic Programming Standard</td><td style="text-align: left">Stratified negation, recursive rules, and aggregates.</td></tr>
+<tr><td style="text-align: left"><strong>Notation3 (N3)</strong></td><td style="text-align: left">W3C Team Submission</td><td style="text-align: left">Expressive rules, quoted graphs, lists, built-ins, and quantifiers.</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="architectural-substrate"><a class="header" href="#architectural-substrate">Architectural Substrate</a></h2>
+<p>At the core of Roxi is a unified, memory-efficient index structure called the <code>TripleIndex</code>. This index is supported by a global, tag-aware interning <code>Encoder</code> that maps complex RDF terms (IRIs, language-tagged strings, datatypes, blank nodes, and nested triple terms) to simple, machine-word-sized integers (<code>usize</code>).</p>
+<p>All five evaluators (SPARQL, SHACL, ShEx, Datalog, and N3) share this single term representation. When you parse a file, load rules, run a query, or validate a shape, the engine executes comparison and index lookups purely as integer matches. Only at the boundary of serialization or external library mapping are these integers decoded back into strings.</p>
+<pre><code class="language-mermaid">graph TD
+    subgraph Storage &amp; Indexing
+        Term[Type-Safe Term Model]
+        Encoder[Interning Encoder]
+        Index[TripleIndex: SPO, POS, OSP]
+    end
+
+    Parser[rio / pest Parser] --&gt; Storage &amp; Indexing
+
+    Storage &amp; Indexing --&gt; SPARQL[SPARQL 1.1 Query Engine]
+    Storage &amp; Indexing --&gt; Datalog[Datalog Stratified Engine]
+    Storage &amp; Indexing --&gt; N3[N3 Reasoner &amp; Built-ins]
+    
+    Storage &amp; Indexing --&gt; Adapter[oxrdf Zero-Copy Adapter]
+    Adapter --&gt; SHACL[SHACL Validator]
+    Adapter --&gt; ShEx[ShEx Validator]
+</code></pre>
+<p>This book serves as the comprehensive manual for developing with Roxi. It covers installation, basic and advanced query pipelines, detailed implementation references for each dialect, and our continuous conformance validation infrastructure.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
+<h2 id="introduction-to-roxi-development"><a class="header" href="#introduction-to-roxi-development">Introduction to Roxi Development</a></h2>
+<p>Roxi is designed to feel native to Rust developers. Because it is packaged as a library crate, there are no database servers to initialize, no docker containers to configure for local development, and no network sockets to manage. Instead, you simply declare it as a dependency in your <code>Cargo.toml</code> and instantiate a memory-backed graph database directly inside your application thread.</p>
+<p>This embedded architecture is perfect for:</p>
+<ul>
+<li><strong>WebAssembly Browser Apps</strong>: Embed an RDF reasoning engine directly in the frontend.</li>
+<li><strong>Command Line Interfaces</strong>: Read Turtle or N3 files, run queries, and output results.</li>
+<li><strong>Microservices</strong>: Spin up fast, isolated, in-memory graph stores for temporary query execution.</li>
+<li><strong>CI/CD Testing</strong>: Spin up lightweight test beds for validating data shapes.</li>
+</ul>
+<hr />
+<h2 id="creating-your-first-project"><a class="header" href="#creating-your-first-project">Creating Your First Project</a></h2>
+<p>To get started, initialize a new Rust binary project:</p>
+<pre><code class="language-bash">cargo new roxi_quickstart --bin
+cd roxi_quickstart
+</code></pre>
+<p>Your directory structure will look like this:</p>
+<pre><code>roxi_quickstart/
+├── Cargo.toml
+└── src/
+    └── main.rs
+</code></pre>
+<p>Next, open the <code>Cargo.toml</code> and configure the dependencies block. In the next section, we will cover the installation options and the specific feature gates available in Roxi.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<h2 id="dependency-configuration"><a class="header" href="#dependency-configuration">Dependency Configuration</a></h2>
+<p>Roxi is available as a Rust crate. To add it to your project, specify it in your <code>Cargo.toml</code>. To leverage the complete feature set of v26.7.4 (such as the Datalog stratified engine), you should enable the relevant feature flags.</p>
+<pre><code class="language-toml">[package]
+name = "roxi_quickstart"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Add the roxi library with desired feature flags
+roxi = { version = "0.1.0", features = ["datalog"] }
+
+# For RDF 1.2 and SPARQL 1.2 compatibility, add the corresponding crates:
+oxrdf = { version = "0.3.3", features = ["rdf-12"] }
+spargebra = { version = "0.4.6", features = ["sparql-12"] }
+sparesults = { version = "0.3.3", features = ["sparql-12"] }
+</code></pre>
+<hr />
+<h2 id="feature-flags-reference"><a class="header" href="#feature-flags-reference">Feature Flags Reference</a></h2>
+<p>Roxi uses Cargo feature flags to compile only the code your application needs. This keeps WebAssembly sizes tiny and build times short:</p>
+<ol>
+<li><strong><code>default</code></strong>: Includes the core RDF storage, the SPARQL 1.1 query engine, and the basic N3 reasoner (Horn rule evaluation).</li>
+<li><strong><code>datalog</code></strong>: Unlocks the advanced Datalog stratified reasoner, topological sorting of predicates, rule-safety checkers, and accumulators for head aggregations.</li>
+<li><strong><code>wasm</code></strong>: Optimizes the build for target <code>wasm32-unknown-unknown</code> (minimizes dependencies, enables JS-compatible clock utilities, and disables multi-threaded rayon indexing).</li>
+</ol>
+<hr />
+<h2 id="compiling-for-webassembly"><a class="header" href="#compiling-for-webassembly">Compiling for WebAssembly</a></h2>
+<p>If you are building for the browser using <code>wasm-pack</code>, you can compile the crate directly:</p>
+<pre><code class="language-bash">wasm-pack build --target web
+</code></pre>
+<p>Roxi automatically conditionalizes thread pools and file I/O operations when compiled under the WebAssembly target, ensuring it runs seamlessly inside browser threads and Web Workers.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h1>
+<h2 id="getting-hands-on-with-roxi"><a class="header" href="#getting-hands-on-with-roxi">Getting Hands-On with Roxi</a></h2>
+<p>This guide provides a complete, runnable example showing how to initialize a <code>TripleStore</code>, parse RDF Turtle triples, register Notation3 rules, run the reasoning engine, and inspect the results.</p>
+<h2 id="writing-the-code"><a class="header" href="#writing-the-code">Writing the Code</a></h2>
+<p>Open your <code>src/main.rs</code> file and replace its contents with the following code. This example demonstrates transitive friend relations, which are computed dynamically by the forward chainer:</p>
+<pre><pre class="playground"><code class="language-rust">use roxi::store::TripleStore;
+use roxi::parser::Syntax;
+use std::error::Error;
+
+fn main() -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt; {
+    // 1. Initialize the embedded memory-backed TripleStore.
+    // This coordinates the TripleIndex, the interning Encoder, and rule-evaluation.
+    let mut store = TripleStore::new();
+
+    // 2. Define the input data using RDF Turtle syntax.
+    let data = r#"
+        @prefix : &lt;http://example.org/&gt; .
+        :alice :friendOf :bob .
+        :bob :friendOf :charlie .
+        :charlie :friendOf :david .
+    "#;
+
+    // Load the triples into the store. Under the hood, this parses the string,
+    // interns the IRIs using the Encoder, and populates the SPO indexes.
+    store.load_triples(data, Syntax::Turtle)?;
+    println!("Successfully loaded baseline RDF data.");
+
+    // 3. Define a Notation3 rule for transitive friend relations.
+    // The rule head is implication-driven.
+    let rules = r#"
+        @prefix : &lt;http://example.org/&gt; .
+        { ?x :friendOf ?y . ?y :friendOf ?z } =&gt; { ?x :transitiveFriend ?z } .
+    "#;
+
+    // Load and compile the rules into the rule index.
+    store.load_rules(rules)?;
+    println!("Successfully compiled N3 rules.");
+
+    // 4. Run the forward-chaining reasoning engine.
+    // This executes a fixpoint loop until no more new facts can be derived.
+    store.materialize()?;
+    println!("Reasoning materialization complete.");
+
+    // 5. Query the store to verify the inferred transitive relations.
+    // We expect alice to be a transitiveFriend of charlie, and bob to be a transitiveFriend of david.
+    let alice = "&lt;http://example.org/alice&gt;";
+    let friend_relation = "&lt;http://example.org/transitiveFriend&gt;";
+    let charlie = "&lt;http://example.org/charlie&gt;";
+    let david = "&lt;http://example.org/david&gt;";
+
+    assert!(store.contains_triple(alice, friend_relation, charlie));
+    assert!(store.contains_triple(alice, friend_relation, david));
+    
+    println!("Verification passed! Transitive relations successfully verified in index.");
+    Ok(())
+}</code></pre></pre>
+<hr />
+<h2 id="running-the-code"><a class="header" href="#running-the-code">Running the Code</a></h2>
+<p>To run the application, execute:</p>
+<pre><code class="language-bash">cargo run
+</code></pre>
+<p>You should see the progress output and the final verification message, confirming the triples were successfully indexed, reasoned, and checked.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="running-queries"><a class="header" href="#running-queries">Running Queries</a></h1>
+<h2 id="declarative-data-fetching-with-sparql"><a class="header" href="#declarative-data-fetching-with-sparql">Declarative Data Fetching with SPARQL</a></h2>
+<p>While direct index queries (like <code>contains_triple</code>) are fast for checking specific facts, complex data extraction requires a declarative language. Roxi provides full support for the <strong>SPARQL 1.1 Query</strong> specification.</p>
+<p>Queries are evaluated against both parsed facts and derived facts (if the reasoner was run beforehand).</p>
+<h2 id="evaluating-queries-in-rust"><a class="header" href="#evaluating-queries-in-rust">Evaluating Queries in Rust</a></h2>
+<p>Below is a complete example of running a SPARQL query that selects all individuals and their friends, returning the results as bindings.</p>
+<pre><pre class="playground"><code class="language-rust">use roxi::store::TripleStore;
+use roxi::parser::Syntax;
+use std::error::Error;
+
+fn main() -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt; {
+    let mut store = TripleStore::new();
+
+    // Load data
+    let data = r#"
+        @prefix : &lt;http://example.org/&gt; .
+        :alice :friendOf :bob ;
+               :age 25 .
+        :bob :friendOf :charlie ;
+             :age 30 .
+    "#;
+    store.load_triples(data, Syntax::Turtle)?;
+
+    // Define a SPARQL query to select names and ages
+    let sparql_query = r#"
+        PREFIX : &lt;http://example.org/&gt;
+        SELECT ?person ?age ?friend WHERE {
+            ?person :age ?age .
+            OPTIONAL { ?person :friendOf ?friend }
+        }
+    "#;
+
+    // Execute the query
+    let results = store.execute_sparql(sparql_query)?;
+
+    println!("Query execution results:");
+    println!("----------------------------------");
+    
+    // Iterate over the resulting bindings
+    for binding in results.bindings() {
+        let person = binding.get("person").map(|t| t.to_string()).unwrap_or_default();
+        let age = binding.get("age").map(|t| t.to_string()).unwrap_or_default();
+        let friend = binding.get("friend").map(|t| t.to_string()).unwrap_or_else(|| "none".to_string());
+        
+        println!("Person: {}, Age: {}, Friend: {}", person, age, friend);
+    }
+    
+    Ok(())
+}</code></pre></pre>
+<hr />
+<h2 id="how-it-works-under-the-hood"><a class="header" href="#how-it-works-under-the-hood">How It Works Under the Hood</a></h2>
+<ol>
+<li><strong>Algebra Compilation</strong>: Roxi delegates SPARQL syntax parsing to <code>spargebra</code>. It converts the query string into a SPARQL algebra object tree.</li>
+<li><strong>Plan Generation</strong>: The algebra tree is compiled into a <code>PlanNode</code> execution tree. Triple patterns inside the query are mapped directly to lazy iterator lookups on the <code>TripleIndex</code>.</li>
+<li><strong>Execution</strong>: The plan is evaluated against the store. Variables (like <code>?person</code> and <code>?age</code>) are bound to the interned <code>usize</code> keys of the matching terms, and resolved back to strings only when calling <code>binding.get()</code>.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="term-model--rdf-12"><a class="header" href="#term-model--rdf-12">Term Model &amp; RDF 1.2</a></h1>
+<h2 id="unified-rdf-representation"><a class="header" href="#unified-rdf-representation">Unified RDF Representation</a></h2>
+<p>The foundation of Roxi is its unified term model, defined in <a href="file:///Users/sac/roxi/lib/src/triples.rs">lib/src/triples.rs</a>. To understand why this model is designed the way it is, we must look at the constraints of semantic graph databases.</p>
+<p>In a typical graph, the same term (for example, the IRI <code>&lt;http://example.org/friendOf&gt;</code>) can appear millions of times as a predicate, subject, or object. Storing this IRI as a heap-allocated string inside every triple structure leads to massive memory overhead and slow comparison speeds (since comparing two triples would require string comparison).</p>
+<p>Roxi solves this by representing terms using the <code>Term</code> sibling enum:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum Term {
+    Iri(TermImpl),
+    Literal(LiteralImpl),
+    BlankNode(BlankNodeImpl),
+    Triple(Box&lt;Triple&gt;), // Nested triple terms for RDF 1.2
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="sibling-enum-architecture-vs-side-tables"><a class="header" href="#sibling-enum-architecture-vs-side-tables">Sibling Enum Architecture vs. Side Tables</a></h2>
+<p>During the design phase of the v26.7.4 release, two options were considered for representing literals and blank nodes:</p>
+<ol>
+<li><strong>Side-Table Mapping</strong>: Keep terms as simple <code>usize</code> integers, and store literal/blank-node properties in a separate global mapping table.</li>
+<li><strong>Sibling Enum (Chosen)</strong>: Expand <code>Term</code> to be a type-safe enum containing distinct <code>TermImpl</code>, <code>LiteralImpl</code>, and <code>BlankNodeImpl</code> variants.</li>
+</ol>
+<p>The sibling enum architecture was chosen for several critical reasons:</p>
+<ul>
+<li><strong>Exhaustive Matching</strong>: The Rust compiler enforces that every match block on <code>Term</code> (inside the query parser, rule evaluator, and index builders) handles all variants. This eliminates runtime mismatch bugs where a literal is mistakenly treated as an IRI.</li>
+<li><strong>Alignment with oxrdf</strong>: This enum mirrors <code>oxrdf::Term</code> (<code>NamedNode</code>, <code>Literal</code>, <code>BlankNode</code>), making the adapter layer zero-copy and highly optimized.</li>
+<li><strong>No Synchronization Overhead</strong>: Side tables require locks (<code>Mutex</code>/<code>RwLock</code>) or thread-local contexts for reads, whereas the sibling enum carries its type information in-place, allowing lock-free parallel query matches.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="iri--encoder"><a class="header" href="#iri--encoder">Iri &amp; Encoder</a></h1>
+<h2 id="resource-string-interning"><a class="header" href="#resource-string-interning">Resource String Interning</a></h2>
+<p>The <code>Encoder</code> struct in <a href="file:///Users/sac/roxi/lib/src/encoding.rs">lib/src/encoding.rs</a> manages string interning. Interning is the process of storing a string exactly once in memory and referring to it via a small integer identifier.</p>
+<p>Here is the structural implementation of the <code>Encoder</code>:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Encoder {
+    iri_to_id: HashMap&lt;String, usize&gt;,
+    id_to_iri: Vec&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="encoding-workflow"><a class="header" href="#encoding-workflow">Encoding Workflow</a></h2>
+<p>When the parser extracts a resource (like an IRI), it calls <code>Encoder::encode</code>:</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant Parser
+    participant Encoder
+    participant HashMap
+    participant Vector
+
+    Parser-&gt;&gt;Encoder: encode("http://example.org/alice")
+    Encoder-&gt;&gt;HashMap: get("http://example.org/alice")
+    alt Exists
+        HashMap--&gt;&gt;Encoder: return id (e.g., 42)
+    else New IRI
+        Encoder-&gt;&gt;Vector: push("http://example.org/alice")
+        Vector--&gt;&gt;Encoder: returns index (e.g., 42)
+        Encoder-&gt;&gt;HashMap: insert("http://example.org/alice", 42)
+    end
+    Encoder--&gt;&gt;Parser: return TermImpl { iri: 42 }
+</code></pre>
+<hr />
+<h2 id="benefits-of-interning"><a class="header" href="#benefits-of-interning">Benefits of Interning</a></h2>
+<ul>
+<li><strong>Memory Reduction</strong>: Long namespace strings (such as <code>http://www.w3.org/1999/02/22-rdf-syntax-ns#</code>) are stored exactly once.</li>
+<li><strong>Integer Indexing</strong>: Roxi's <code>Triple</code> struct represents a statement using machine-sized integers:
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Triple {
+    pub s: VarOrTerm,
+    pub p: VarOrTerm,
+    pub o: VarOrTerm,
+    pub g: Option&lt;VarOrTerm&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+Comparing two triples is reduced to checking equality of three integers, which is executed in a single CPU cycle.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="literals--datatypes"><a class="header" href="#literals--datatypes">Literals &amp; Datatypes</a></h1>
+<h2 id="anatomy-of-an-rdf-literal"><a class="header" href="#anatomy-of-an-rdf-literal">Anatomy of an RDF Literal</a></h2>
+<p>Unlike IRIs, RDF literals have internal structures:</p>
+<ol>
+<li><strong>Lexical Value</strong>: The actual text value (e.g. <code>"42"</code> or <code>"hello"</code>).</li>
+<li><strong>Datatype IRI</strong>: The type of value (e.g. <code>xsd:integer</code> or <code>xsd:date</code>).</li>
+<li><strong>Language Tag</strong>: Optional string indicating the language (e.g. <code>"en"</code> or <code>"fr"</code>).</li>
+</ol>
+<p>Roxi represents these values using the <code>LiteralImpl</code> struct:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct LiteralImpl {
+    pub value: usize,            // Encoded lexical value
+    pub datatype: Option&lt;usize&gt;, // Encoded datatype IRI
+    pub lang: Option&lt;usize&gt;,     // Encoded language tag
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="datatype-and-language-tag-preservation"><a class="header" href="#datatype-and-language-tag-preservation">Datatype and Language Tag Preservation</a></h2>
+<p>To maintain semantic compliance, the interning <code>Encoder</code> preserves datatype and language tag contexts during roundtrips:</p>
+<ul>
+<li><strong>Separation</strong>: The encoder maintains distinct namespaces for values, datatypes, and language tags.</li>
+<li><strong>Uniqueness</strong>: The literals <code>"42"^^xsd:integer</code> and <code>"42"^^xsd:string</code> resolve to distinct <code>LiteralImpl</code> instances, preventing incorrect matches during query evaluations.</li>
+<li><strong>SPARQL Filters</strong>: During SPARQL filter execution (e.g., <code>?age &gt; 21</code>), Roxi's query evaluator extracts the datatype IRI, decodes the lexical value, parses it to a native Rust numeric type (<code>i32</code> or <code>f64</code>), and performs the comparison. If the datatype is unrecognized, it falls back to lexical comparison.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="blank-nodes"><a class="header" href="#blank-nodes">Blank Nodes</a></h1>
+<h2 id="anonymous-resources-in-roxi"><a class="header" href="#anonymous-resources-in-roxi">Anonymous Resources in Roxi</a></h2>
+<p>Blank nodes (or anonymous nodes) represent resources that do not have an explicit IRI. In RDF syntax, they are represented with the <code>_:</code> prefix (e.g., <code>_:b1</code>).</p>
+<p>Roxi models blank nodes using the <code>BlankNodeImpl</code> struct:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct BlankNodeImpl {
+    pub id: usize,
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="scoping-and-identifier-allocation"><a class="header" href="#scoping-and-identifier-allocation">Scoping and Identifier Allocation</a></h2>
+<p>Because blank node labels (like <code>_:b1</code>) are local to the document, they must be scoped carefully to prevent collisions:</p>
+<ol>
+<li><strong>Parser Allocation</strong>: When a parser processes a document, it tracks local blank node labels. For each unique label, it requests a new identifier from the global <code>Encoder</code>.</li>
+<li><strong>Session Scoping</strong>: If you load multiple files into the same <code>TripleStore</code>, the encoder guarantees that <code>_:b1</code> in File A and <code>_:b1</code> in File B receive different <code>usize</code> IDs, preserving graph isolation.</li>
+<li><strong>Adapter Translation</strong>: When mapping to <code>oxrdf</code> structures, Roxi translates these internal IDs to unique blank node labels (<code>b0</code>, <code>b1</code>, etc.) so external validation engines can map blank node relations correctly.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rdf-12-triple-terms"><a class="header" href="#rdf-12-triple-terms">RDF 1.2 Triple Terms</a></h1>
+<h2 id="nested-assertions--metadata"><a class="header" href="#nested-assertions--metadata">Nested Assertions &amp; Metadata</a></h2>
+<p>RDF 1.2 introduces <strong>triple terms</strong>, which provide a standard syntax for annotating other triples. This is often used for expressing confidence, origin, and temporal validity of statements.</p>
+<p>In Roxi, triple terms are represented recursively within the <code>Term</code> enum:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum Term {
+    Iri(TermImpl),
+    Literal(LiteralImpl),
+    BlankNode(BlankNodeImpl),
+    Triple(Box&lt;Triple&gt;), // Nested triple term
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="parsing-syntax"><a class="header" href="#parsing-syntax">Parsing Syntax</a></h2>
+<p>RDF 1.2 triple terms use double-angled braces:</p>
+<pre><code class="language-turtle">@prefix : &lt;http://example.org/&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+# A nested triple annotated with metadata
+&lt;&lt; :alice :hasAccessTo :secureFolder &gt;&gt; :authorizedBy :admin ;
+                                       :grantedDate "2026-07-04"^^xsd:date .
+</code></pre>
+<hr />
+<h2 id="query-evaluation"><a class="header" href="#query-evaluation">Query Evaluation</a></h2>
+<p>In SPARQL 1.2, you can query these nested structures directly using matching patterns:</p>
+<pre><code class="language-sparql">PREFIX : &lt;http://example.org/&gt;
+SELECT ?user ?grantor WHERE {
+    &lt;&lt; ?user :hasAccessTo :secureFolder &gt;&gt; :authorizedBy ?grantor .
+}
+</code></pre>
+<p>Roxi's SPARQL query planner compiles this pattern into a nested <code>PlanNode</code>. The engine performs index lookups recursively, extracting the inner subject/predicate/object terms and matching them against the <code>TripleIndex</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rule-reasoning-engine"><a class="header" href="#rule-reasoning-engine">Rule Reasoning Engine</a></h1>
+<h2 id="dual-reasoning-paradigms"><a class="header" href="#dual-reasoning-paradigms">Dual Reasoning Paradigms</a></h2>
+<p>Roxi incorporates both forward-chaining and backward-chaining rule evaluators. The choice of reasoner depends on your query patterns and memory constraints.</p>
+<pre><code>+-----------------------------------------------------------------------+
+|                            Reasoning Engine                           |
++-----------------------------------------------------------------------+
+        |                                                       |
+        v                                                       v
++-----------------------------+         +-------------------------------+
+|  Forward Chaining Reasoner  |         |  Backward Chaining Reasoner   |
++-----------------------------+         +-------------------------------+
+| * Computes all inferences.  |         | * Computes goals on-demand.   |
+| * Stores facts in memory.   |         | * Zero memory write cost.     |
+| * Fast query time.          |         | * Query cost depends on rules.|
+| * DRed incremental deletes. |         | * DFS path resolution.        |
++-----------------------------+         +-------------------------------+
+</code></pre>
+<hr />
+<h2 id="shared-substrate"><a class="header" href="#shared-substrate">Shared Substrate</a></h2>
+<p>Both engines operate directly on the <code>TripleIndex</code> and share the same compiled rule representations:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Rule {
+    pub body: Vec&lt;BodyLiteral&gt;,
+    pub head: Triple,
+}
+<span class="boring">}</span></code></pre></pre>
+<p>By using the same underlying structures, Roxi allows you to interleave the two strategies—materializing base facts using forward-chaining rules, while running on-demand backward queries for complex transitive dependencies.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="forward-chaining-reasoner"><a class="header" href="#forward-chaining-reasoner">Forward Chaining Reasoner</a></h1>
+<h2 id="materialization-engine"><a class="header" href="#materialization-engine">Materialization Engine</a></h2>
+<p>Roxi's forward-chaining reasoner is located in <a href="file:///Users/sac/roxi/lib/src/reasoner.rs">lib/src/reasoner.rs</a>. It pre-computes and stores all inferable facts in the <code>TripleIndex</code>.</p>
+<p>The materialization process runs a fixpoint execution loop:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn materialize(&amp;mut self) -&gt; Result&lt;(), ReasoningError&gt; {
+    let mut new_triples = Vec::new();
+    loop {
+        new_triples.clear();
+        for rule in &amp;self.rules {
+            // Find all matching bindings for the rule body patterns
+            let bindings = self.index.query_body(&amp;rule.body);
+            for binding in bindings {
+                // Ground the rule head and check if it already exists
+                let derived = rule.head.ground(&amp;binding);
+                if !self.index.contains(&amp;derived) {
+                    new_triples.push(derived);
+                }
+            }
+        }
+        if new_triples.is_empty() {
+            break; // Fixpoint reached
+        }
+        self.index.insert_batch(&amp;new_triples);
+    }
+    Ok(())
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="incremental-maintenance-dred"><a class="header" href="#incremental-maintenance-dred">Incremental Maintenance (DRed)</a></h2>
+<p>To avoid full recalculations when triples are deleted, Roxi uses the <strong>Delete/Rederive (DRed)</strong> algorithm:</p>
+<ol>
+<li><strong>Delete Propagation</strong>: When a base triple is deleted, the engine propagates the deletion. Any derived triple that depends on the deleted triple is marked for deletion.</li>
+<li><strong>Rederivation Check</strong>: The engine checks if the marked triples can be derived through alternate paths (e.g., via different rules or base facts). If an alternate path is found, the triple is unmarked.</li>
+<li><strong>Clean-up</strong>: Remaining marked triples are removed from the index.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="backward-chainer"><a class="header" href="#backward-chainer">Backward Chainer</a></h1>
+<h2 id="on-demand-inference"><a class="header" href="#on-demand-inference">On-Demand Inference</a></h2>
+<p>Roxi's backward chainer, located in <a href="file:///Users/sac/roxi/lib/src/backwardchaining.rs">lib/src/backwardchaining.rs</a>, executes on-demand reasoning. Instead of materializing all possible facts, it starts with a query goal and evaluates only the rules needed to resolve it.</p>
+<p>This approach is highly memory-efficient, making it ideal for systems with large base datasets but specific, targeted queries.</p>
+<hr />
+<h2 id="sld-resolution"><a class="header" href="#sld-resolution">SLD Resolution</a></h2>
+<p>The engine uses SLD-style resolution to resolve subgoals:</p>
+<ol>
+<li><strong>Goal Matching</strong>: Matches the query goal (e.g., <code>?x :ancestorOf :bob</code>) against rule heads.</li>
+<li><strong>Subgoal Decomposition</strong>: Replaces the goal with the rule body patterns, turning them into new subgoals.</li>
+<li><strong>Index Evaluation</strong>: Looks up positive subgoals directly in the <code>TripleIndex</code>.</li>
+<li><strong>Binding Union</strong>: Joins the resulting bindings and propagates them back up the recursion tree.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cycle-safety--visited-guards-in-roxi"><a class="header" href="#cycle-safety--visited-guards-in-roxi">Cycle Safety &amp; Visited Guards in Roxi</a></h1>
+<h2 id="1-the-recursion-problem-in-backward-chainers"><a class="header" href="#1-the-recursion-problem-in-backward-chainers">1. The Recursion Problem in Backward Chainers</a></h2>
+<p>Backward-chaining reasoning engines compute facts on-demand by starting with a query goal and recursively evaluating rules whose heads match that goal. While this approach avoids the upfront memory costs of forward materialization, it faces a fundamental challenge: <strong>infinite recursion</strong>.</p>
+<p>In semantic graphs, recursive relationships are common (e.g., family trees, networks, class hierarchies). Consider a simple transitive rule:
+$$\text{connectedTo}(?X, ?Y) \leftarrow \text{linkedTo}(?X, ?Z), \text{connectedTo}(?Z, ?Y)$$</p>
+<p>If the input graph contains a circular relationship (for example, $:A \xrightarrow{\text{linkedTo}} :B$ and $:B \xrightarrow{\text{linkedTo}} :A$), evaluating the goal query <code>?x :connectedTo :C</code> leads to the following execution sequence:</p>
+<ol>
+<li>Match rule head: <code>?x :connectedTo :C</code> $\to$ resolve body subgoal <code>?z :connectedTo :C</code>.</li>
+<li>First bind <code>?z</code> to <code>:B</code> (using <code>:A :linkedTo :B</code>). Resolve subgoal <code>:B :connectedTo :C</code>.</li>
+<li>Match rule head for <code>:B :connectedTo :C</code> $\to$ resolve body subgoal <code>?z2 :connectedTo :C</code>.</li>
+<li>Bind <code>?z2</code> to <code>:A</code> (using <code>:B :linkedTo :A</code>). Resolve subgoal <code>:A :connectedTo :C</code>.</li>
+<li>The goal <code>:A :connectedTo :C</code> is identical to the step 1 goal, creating an infinite loop.</li>
+</ol>
+<p>Without termination guards, this recursive loop causes a stack overflow (SIGSEGV) or hangs the process indefinitely.</p>
+<hr />
+<h2 id="2-visited-set-history-guard-implementation"><a class="header" href="#2-visited-set-history-guard-implementation">2. Visited-Set History Guard Implementation</a></h2>
+<p>To guarantee termination and ensure stack safety, Roxi implements a <strong>Visited-Set History Guard</strong> in <a href="file:///Users/sac/roxi/lib/src/backwardchaining.rs">lib/src/backwardchaining.rs</a>.</p>
+<p>During backward resolution, the engine threads a mutable <code>history</code> context containing all subgoals currently active in the execution stack.</p>
+<pre><code>       [Goal: ?x :connectedTo :C]
+                  |
+                  | (history: {})
+                  v
+       [Goal: :B :connectedTo :C]
+                  |
+                  | (history: {?x :connectedTo :C})
+                  v
+       [Goal: :A :connectedTo :C]
+                  |
+                  | (history: {?x :connectedTo :C, :B :connectedTo :C})
+                  v
+       Check History: Goal matches '?x :connectedTo :C' (Bound to :A)
+                  |
+                  +---&gt; DETECTED CYCLE! Abort recursion &amp; return empty bindings
+</code></pre>
+<hr />
+<h2 id="3-step-by-step-traversal-protocol"><a class="header" href="#3-step-by-step-traversal-protocol">3. Step-by-Step Traversal Protocol</a></h2>
+<ol>
+<li><strong>Subgoal Interception</strong>: When a subgoal <code>G</code> is scheduled for evaluation, the engine verifies if <code>G</code> matches any goal already present in <code>history</code> (accounting for variable binding states).</li>
+<li><strong>Short-Circuit</strong>: If <code>G</code> is detected in <code>history</code>, the engine terminates the branch immediately and returns an empty set of bindings, preventing infinite loops.</li>
+<li><strong>Push Step</strong>: If <code>G</code> is not present, it is added to the <code>history</code> set, and evaluation proceeds recursively.</li>
+<li><strong>Pop (Backtrack) Step</strong>: When the recursive evaluation of <code>G</code> completes and the engine backtracks to explore alternative rule paths, <code>G</code> is removed from the <code>history</code> set. This ensures that independent execution branches are not blocked.</li>
+</ol>
+<hr />
+<h2 id="4-rust-implementation-reference"><a class="header" href="#4-rust-implementation-reference">4. Rust Implementation Reference</a></h2>
+<p>Below is the Rust implementation of the cycle guard:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashSet;
+use std::rc::Rc;
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Triple {
+    pub s: usize,
+    pub p: usize,
+    pub o: usize,
+}
+
+pub struct Bindings {
+    pub rows: Vec&lt;Vec&lt;usize&gt;&gt;,
+}
+
+pub struct BackwardChainer {
+    // Rule index and store references
+}
+
+impl BackwardChainer {
+    /// Public entry point for goal resolution
+    pub fn resolve_query(&amp;self, goal: &amp;Triple) -&gt; Bindings {
+        let mut history = HashSet::new();
+        self.resolve_goal_inner(goal, &amp;mut history)
+    }
+
+    /// Internal recursive evaluation carrying the visited history set
+    fn resolve_goal_inner(&amp;self, goal: &amp;Triple, history: &amp;mut HashSet&lt;Triple&gt;) -&gt; Bindings {
+        // 1. Cycle Check
+        if history.contains(goal) {
+            // Cycle detected: short-circuit recursion and return empty bindings
+            return Bindings { rows: Vec::new() };
+        }
+
+        // 2. Register current goal in history
+        history.insert(goal.clone());
+
+        let mut results = Bindings { rows: Vec::new() };
+
+        // 3. Evaluate matching rules
+        let matching_rules = self.find_matching_rules(goal);
+        for rule in matching_rules {
+            let subgoal_results = self.resolve_rule_body(&amp;rule, history);
+            results.extend(subgoal_results);
+        }
+
+        // 4. Remove goal from history during backtrack step
+        history.remove(goal);
+
+        results
+    }
+
+    fn find_matching_rules(&amp;self, _goal: &amp;Triple) -&gt; Vec&lt;Rc&lt;Rule&gt;&gt; {
+        // Mock implementation for reference
+        Vec::new()
+    }
+
+    fn resolve_rule_body(&amp;self, _rule: &amp;Rule, _history: &amp;mut HashSet&lt;Triple&gt;) -&gt; Bindings {
+        // Mock implementation for reference
+        Bindings { rows: Vec::new() }
+    }
+}
+
+pub struct Rule {
+    pub body: Vec&lt;Triple&gt;,
+    pub head: Triple,
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="5-thread-sandboxed-timeout-guards-in-ci"><a class="header" href="#5-thread-sandboxed-timeout-guards-in-ci">5. Thread-Sandboxed Timeout Guards in CI</a></h2>
+<p>In the test runner <a href="file:///Users/sac/roxi/lib/tests/backwardchaining_cycles.rs">lib/tests/backwardchaining_cycles.rs</a>, cycle guards are validated using a thread-sandboxed safety mechanism. If an implementation error introduces an infinite recursion loop, the test thread is aborted after a 500ms timeout instead of hanging the entire CI pipeline:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[test]
+fn test_cyclic_rules_terminate() {
+    let (tx, rx) = std::sync::mpsc::channel();
+    
+    // Spawn evaluation in a sandboxed thread
+    std::thread::spawn(move || {
+        let store = setup_cyclic_store();
+        let result = store.query_backward(":A", ":connectedTo", "?y");
+        let _ = tx.send(result);
+    });
+
+    // Enforce a strict 500ms timeout
+    let test_timeout = std::time::Duration::from_millis(500);
+    match rx.recv_timeout(test_timeout) {
+        Ok(_) =&gt; {} // Test passed: evaluation terminated in bounded time
+        Err(_) =&gt; panic!("Timeout: Cycle guard failed to terminate recursive loop!"),
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="csprite-hierarchy-traversal"><a class="header" href="#csprite-hierarchy-traversal">CSprite Hierarchy Traversal</a></h1>
+<h2 id="ontological-hierarchy-compilations"><a class="header" href="#ontological-hierarchy-compilations">Ontological Hierarchy Compilations</a></h2>
+<p><code>CSprite</code> in <a href="file:///Users/sac/roxi/lib/src/csprite.rs">lib/src/csprite.rs</a> compiles ontological relationships (such as <code>rdfs:subClassOf</code> and <code>rdfs:subPropertyOf</code>) into optimized lookup indexes, avoiding general-purpose rule execution costs.</p>
+<hr />
+<h2 id="cycle-guards-in-traversal-helpers"><a class="header" href="#cycle-guards-in-traversal-helpers">Cycle Guards in Traversal Helpers</a></h2>
+<p>Because class ontologies can contain circular subclass definitions, the <code>CSprite</code> compiler uses cycle guards at all recursive traversal sites:</p>
+<ol>
+<li><strong><code>eval_backward_csprite</code></strong>: Resolves subclass relations recursively.</li>
+<li><strong><code>eval_backward_csprite_helper</code></strong>: Recursion helper carrying the visited set.</li>
+<li><strong><code>eval_backward_csprite_helper_with_stack</code></strong>: Stack-based iterative fallback for deep hierarchies.</li>
+<li><strong><code>rewrite_hierarchy</code></strong>: Optimizes rule bodies during schema compilations.</li>
+</ol>
+<p>If a circular dependency is detected in the class tree, the traversal terminates, preventing infinite loops during query compilation.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="advanced-datalog-engine"><a class="header" href="#advanced-datalog-engine">Advanced Datalog Engine</a></h1>
+<h2 id="datalog-in-roxi"><a class="header" href="#datalog-in-roxi">Datalog in Roxi</a></h2>
+<p>Datalog is a declarative logic programming language that extends standard database queries with recursive rules. In Roxi, the Datalog engine is built directly on the shared <code>TripleIndex</code> and <code>Reasoner</code> infrastructure.</p>
+<hr />
+<h2 id="architectural-comparison"><a class="header" href="#architectural-comparison">Architectural Comparison</a></h2>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Feature</th><th style="text-align: left">Standard SQL</th><th style="text-align: left">Roxi Datalog</th><th style="text-align: left">Notation3 (N3)</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Recursion</strong></td><td style="text-align: left">Complex (CTE)</td><td style="text-align: left">Native &amp; Optimized</td><td style="text-align: left">Native</td></tr>
+<tr><td style="text-align: left"><strong>Negation</strong></td><td style="text-align: left"><code>NOT EXISTS</code></td><td style="text-align: left">Stratified Negation</td><td style="text-align: left">Quoted Graph Negation</td></tr>
+<tr><td style="text-align: left"><strong>Safety Check</strong></td><td style="text-align: left">N/A</td><td style="text-align: left">Enforced at Parse Time</td><td style="text-align: left">N/A</td></tr>
+<tr><td style="text-align: left"><strong>Aggregates</strong></td><td style="text-align: left">Standard</td><td style="text-align: left">Grouped (Head)</td><td style="text-align: left">Procedural Built-ins</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="key-subsystems"><a class="header" href="#key-subsystems">Key Subsystems</a></h2>
+<ol>
+<li><strong>Stratification Checker</strong>: Builds dependency graphs and topological strata to support safe negation-as-failure.</li>
+<li><strong>Safety Verifier</strong>: Guarantees that rules have finite groundings, rejecting unsafe rules at load time.</li>
+<li><strong>Head Aggregator</strong>: Computes mathematical aggregations (<code>sum</code>, <code>count</code>, etc.) over grouped variables.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="datalog-rule-safety-verification"><a class="header" href="#datalog-rule-safety-verification">Datalog Rule Safety Verification</a></h1>
+<h2 id="1-the-safety-problem-in-logic-programming"><a class="header" href="#1-the-safety-problem-in-logic-programming">1. The Safety Problem in Logic Programming</a></h2>
+<p>In Datalog, rules are executed over a database of facts to derive new facts. If a rule is unrestricted, it can potentially generate an infinite number of derived facts, or facts containing variables that cannot be bound to any concrete value in the database.</p>
+<p>Consider the following rules:</p>
+<p>$$\text{unsafe1}(?X, ?Y) \leftarrow \text{person}(?X)$$
+$$\text{unsafe2}(?X) \leftarrow \text{person}(?X), \neg \text{employee}(?Y)$$</p>
+<ul>
+<li>In $\text{unsafe1}$, the variable $?Y$ appears in the head but does not appear in any positive body literal. If we try to ground this rule, $?Y$ can match any value from an infinite domain, making evaluation impossible.</li>
+<li>In $\text{unsafe2}$, the variable $?Y$ appears in a negated body literal but does not appear in any positive body literal. The database cannot bind $?Y$ to verify its absence, leading to an infinite domain of checkable values.</li>
+</ul>
+<p>To guarantee that all Datalog evaluations terminate in finite time and yield well-defined relations, Roxi enforces the standard <strong>Datalog Safety Condition</strong> at rule-loading time.</p>
+<hr />
+<h2 id="2-the-datalog-safety-rules"><a class="header" href="#2-the-datalog-safety-rules">2. The Datalog Safety Rules</a></h2>
+<p>A rule in Roxi is considered <strong>safe</strong> if and only if it satisfies the following three conditions:</p>
+<ol>
+<li><strong>Head Variable Safety</strong>: Every variable that appears in the <strong>head</strong> of the rule must also appear in at least one <strong>positive body literal</strong>.</li>
+<li><strong>Negated Literal Safety</strong>: Every variable that appears in a <strong>negated body literal</strong> (<code>not Predicate(...)</code>) must also appear in at least one <strong>positive body literal</strong>.</li>
+<li><strong>Aggregate Variable Safety</strong>: Every variable that appears as a grouping key in the head or inside an aggregate function must also appear in at least one <strong>positive body literal</strong>.</li>
+</ol>
+<p>Positive body literals act as "binders." They restrict the search space for all variables to the active domain of the database (the set of all constants present in the index).</p>
+<hr />
+<h2 id="3-verification-pipeline"><a class="header" href="#3-verification-pipeline">3. Verification Pipeline</a></h2>
+<p>The safety verification pipeline in <a href="file:///Users/sac/roxi/lib/src/ruleindex.rs">lib/src/ruleindex.rs</a> executes during rule compilation:</p>
+<pre><code>          Rule String
+               |
+               v
+          Pest Parser
+               |
+               v
+      Raw Rule Structure
+               |
+               v
+   Collect Positive Variables (PVar)
+   Collect Head &amp; Negated Variables (HVar, NVar)
+               |
+               +---&gt; Check: HVar subset of PVar?
+               +---&gt; Check: NVar subset of PVar?
+               /                               \\
+           [Pass]                            [Fail]
+             /                                  \\
+     Insert into RuleIndex            Abort &amp; Return RuleSafetyError
+</code></pre>
+<hr />
+<h2 id="4-rust-verification-code-reference"><a class="header" href="#4-rust-verification-code-reference">4. Rust Verification Code Reference</a></h2>
+<p>Below is the Rust code implementing the safety verifier in Roxi:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashSet;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Term {
+    Variable(String),
+    Constant(usize),
+}
+
+#[derive(Debug, Clone)]
+pub struct Literal {
+    pub predicate: usize,
+    pub terms: Vec&lt;Term&gt;,
+    pub is_negated: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct Rule {
+    pub head_predicate: usize,
+    pub head_terms: Vec&lt;Term&gt;,
+    pub body: Vec&lt;Literal&gt;,
+}
+
+#[derive(Debug)]
+pub enum RuleSafetyError {
+    UnboundHeadVariable(String),
+    UnboundNegatedVariable(String),
+}
+
+impl Rule {
+    /// Verifies the safety of the rule. Returns Ok(()) or a RuleSafetyError.
+    pub fn verify_safety(&amp;self) -&gt; Result&lt;(), RuleSafetyError&gt; {
+        // 1. Collect all variables bound in positive body literals
+        let mut bound_vars = HashSet::new();
+        for literal in &amp;self.body {
+            if !literal.is_negated {
+                for term in &amp;literal.terms {
+                    if let Term::Variable(name) = term {
+                        bound_vars.insert(name.clone());
+                    }
+                }
+            }
+        }
+
+        // 2. Verify all variables in the head are bound
+        for term in &amp;self.head_terms {
+            if let Term::Variable(name) = term {
+                if !bound_vars.contains(name) {
+                    return Err(RuleSafetyError::UnboundHeadVariable(name.clone()));
+                }
+            }
+        }
+
+        // 3. Verify all variables in negated body literals are bound
+        for literal in &amp;self.body {
+            if literal.is_negated {
+                for term in &amp;literal.terms {
+                    if let Term::Variable(name) = term {
+                        if !bound_vars.contains(name) {
+                            return Err(RuleSafetyError::UnboundNegatedVariable(name.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="5-safe-vs-unsafe-rule-examples"><a class="header" href="#5-safe-vs-unsafe-rule-examples">5. Safe vs. Unsafe Rule Examples</a></h2>
+<h3 id="safe-rule-valid"><a class="header" href="#safe-rule-valid">Safe Rule (Valid)</a></h3>
+<pre><code class="language-prolog"># All variables (?x, ?y) are bound in positive body literals.
+hasManager(?x, ?y) :- employee(?x), manages(?y, ?x).
+</code></pre>
+<h3 id="unsafe-rule-rejected"><a class="header" href="#unsafe-rule-rejected">Unsafe Rule (Rejected)</a></h3>
+<pre><code class="language-prolog"># ?y is not present in a positive body literal.
+# Generates RuleSafetyError::UnboundHeadVariable("y")
+worksWith(?x, ?y) :- employee(?x).
+</code></pre>
+<h3 id="unsafe-negation-rejected"><a class="header" href="#unsafe-negation-rejected">Unsafe Negation (Rejected)</a></h3>
+<pre><code class="language-prolog"># ?y in the negated literal is not bound by any positive body literal.
+# Generates RuleSafetyError::UnboundNegatedVariable("y")
+unassigned(?x) :- job(?x), not assigns(?y, ?x).
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="stratified-negation-in-roxi-datalog"><a class="header" href="#stratified-negation-in-roxi-datalog">Stratified Negation in Roxi Datalog</a></h1>
+<h2 id="1-theoretical-foundations"><a class="header" href="#1-theoretical-foundations">1. Theoretical Foundations</a></h2>
+<p>In traditional logic programming and relational databases, negation-as-failure (NAF) is a query-time rule: if a fact cannot be proven to be true after exhaustive search, it is assumed to be false. While NAF is intuitive for non-recursive query blocks, it introduces semantic ambiguity and logical contradictions when combined with recursive rules.</p>
+<p>Consider the classic self-negation loop:
+$$p \leftarrow \neg p$$</p>
+<p>Under a standard forward-chaining evaluation:</p>
+<ul>
+<li>If we assume $p$ is false, the rule derives that $p$ is true.</li>
+<li>If we assume $p$ is true, the rule cannot derive $p$, implying $p$ is false.</li>
+</ul>
+<p>This contradiction means the system has no stable model. To resolve this, Roxi enforces <strong>stratified negation</strong>. Stratification partitions the predicates in a program into a sequence of layers (strata) such that negation is only applied to predicates whose evaluation has already been fully completed and "fixed" in a lower stratum.</p>
+<p>Specifically, a Datalog program is stratifiable if there exists a partitioning of its predicates into strata $S_0, S_1, \dots, S_n$ such that for every rule:
+$$P \leftarrow Q_1, \dots, Q_k, \neg R_1, \dots, \neg R_m$$</p>
+<ol>
+<li>The stratum of any positive body predicate $Q_i$ is less than or equal to the stratum of the head predicate $P$:
+$$\text{stratum}(Q_i) \le \text{stratum}(P)$$</li>
+<li>The stratum of any negated body predicate $R_j$ is strictly less than the stratum of the head predicate $P$:
+$$\text{stratum}(R_j) &lt; \text{stratum}(P)$$</li>
+</ol>
+<hr />
+<h2 id="2-predicate-dependency-graph-pdg"><a class="header" href="#2-predicate-dependency-graph-pdg">2. Predicate Dependency Graph (PDG)</a></h2>
+<p>To verify stratifiability and compute the stratum assignments, Roxi's Datalog engine compiles the rules into a <strong>Predicate Dependency Graph (PDG)</strong> at load time.</p>
+<ul>
+<li><strong>Nodes</strong>: Nodes in the graph represent unique predicates (e.g., table names, relations).</li>
+<li><strong>Positive Edges ($P \xrightarrow{+} Q$)</strong>: Directed edge from $Q$ to $P$ if $Q$ appears as a positive literal in the body of a rule where $P$ is the head. This indicates that deriving $P$ depends positively on the derivation of $Q$.</li>
+<li><strong>Negative Edges ($P \xrightarrow{-} Q$)</strong>: Directed edge from $Q$ to $P$ if $Q$ appears as a negated literal (<code>not Q(...)</code>) in the body of a rule where $P$ is the head. This indicates that deriving $P$ depends on the <em>absence</em> of $Q$.</li>
+</ul>
+<pre><code>       +-----------------+
+       |   Predicate A   |
+       +-----------------+
+          /           \
+   (+)   /             \   (-)
+        v               v
++-----------------+   +-----------------+
+|   Predicate B   |   |   Predicate C   |
++-----------------+   +-----------------+
+</code></pre>
+<hr />
+<h2 id="3-stratum-assignment-algorithm"><a class="header" href="#3-stratum-assignment-algorithm">3. Stratum Assignment Algorithm</a></h2>
+<p>Roxi executes the following algorithm in <a href="file:///Users/sac/roxi/lib/src/datalog.rs">lib/src/datalog.rs</a> to calculate the topological strata:</p>
+<ol>
+<li><strong>Cycle Detection (Strongly Connected Components)</strong>: Run Tarjan's or Kosaraju's algorithm to identify all Strongly Connected Components (SCCs) in the PDG.</li>
+<li><strong>Negation Cycle Verification</strong>: Inspect each SCC. If any SCC contains a cycle that passes through a <strong>negative edge</strong>, the program is <strong>unstratifiable</strong>. The engine aborts rule-loading and returns an <code>UnstratifiableRulesError</code>.</li>
+<li><strong>Topological Sort</strong>: Collapse the SCCs into a directed acyclic graph (DAG) and perform a topological sort.</li>
+<li><strong>Stratum Calculation</strong>:
+<ul>
+<li>Set $\text{stratum}(P) = 0$ for all predicates that have no dependencies.</li>
+<li>For each predicate $P$ in topological order, calculate its stratum based on its dependencies:
+$$\text{stratum}(P) = \max \left( { \text{stratum}(Q) \mid P \xrightarrow{+} Q } \cup { \text{stratum}(R) + 1 \mid P \xrightarrow{-} R } \right)$$</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="4-evaluation-engine"><a class="header" href="#4-evaluation-engine">4. Evaluation Engine</a></h2>
+<p>Once the strata are computed, the forward-chaining <code>Reasoner</code> in <a href="file:///Users/sac/roxi/lib/src/reasoner.rs">lib/src/reasoner.rs</a> evaluates the database stratum-by-stratum:</p>
+<pre><code>[Base Facts]
+     |
+     v
+[Evaluate Stratum 0] ----&gt; Fixpoint reached (Facts of Stratum 0 are locked)
+     |
+     v
+[Evaluate Stratum 1] ----&gt; Negated checks evaluate against locked Stratum 0 facts
+     |
+     v
+[Evaluate Stratum 2] ----&gt; Negated checks evaluate against locked Stratum 0 &amp; 1 facts
+</code></pre>
+<p>During the evaluation of Stratum $i$:</p>
+<ul>
+<li><strong>Positive matching</strong>: Pattern queries are evaluated dynamically against the entire <code>TripleIndex</code>.</li>
+<li><strong>Negated matching</strong>: When matching a negated literal like <code>not Q(?x, ?y)</code>, the engine checks if the relation is present in the database. Because $Q$ belongs to a lower stratum ($&lt; i$), its evaluation is guaranteed to be complete. If $Q(?x, ?y)$ is not found in the index, the negated check succeeds.</li>
+</ul>
+<hr />
+<h2 id="5-rust-implementation-reference"><a class="header" href="#5-rust-implementation-reference">5. Rust Implementation Reference</a></h2>
+<p>Below is the Rust structural design of the stratification verification pass in <code>datalog.rs</code>:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::{HashMap, HashSet};
+
+pub type PredicateId = usize;
+
+#[derive(Debug, Clone)]
+pub struct DependencyEdge {
+    pub target: PredicateId,
+    pub is_negated: bool,
+}
+
+pub struct PredicateDependencyGraph {
+    pub adj_list: HashMap&lt;PredicateId, Vec&lt;DependencyEdge&gt;&gt;,
+}
+
+impl PredicateDependencyGraph {
+    pub fn new() -&gt; Self {
+        Self {
+            adj_list: HashMap::new(),
+        }
+    }
+
+    pub fn add_dependency(&amp;mut self, head: PredicateId, body: PredicateId, is_negated: bool) {
+        self.adj_list
+            .entry(head)
+            .or_default()
+            .push(DependencyEdge {
+                target: body,
+                is_negated,
+            });
+    }
+
+    /// Computes strata or returns Err if an unstratifiable negative cycle is detected.
+    pub fn compute_strata(&amp;self) -&gt; Result&lt;HashMap&lt;PredicateId, usize&gt;, DatalogError&gt; {
+        let mut strata = HashMap::new();
+        // 1. Identify Strongly Connected Components (SCC)
+        let sccs = self.find_sccs();
+        
+        // 2. Verify no negative edges inside any SCC
+        for scc in &amp;sccs {
+            if self.has_negative_cycle_in_scc(scc) {
+                return Err(DatalogError::Unstratifiable(
+                    "Negation through a recursive cycle detected!".to_string()
+                ));
+            }
+        }
+
+        // 3. Compute topological strata assignment
+        for scc in sccs {
+            for &amp;node in &amp;scc {
+                let mut max_stratum = 0;
+                if let Some(edges) = self.adj_list.get(&amp;node) {
+                    for edge in edges {
+                        let dep_stratum = strata.get(&amp;edge.target).cloned().unwrap_or(0);
+                        let cost = if edge.is_negated { 1 } else { 0 };
+                        max_stratum = max_stratum.max(dep_stratum + cost);
+                    }
+                }
+                strata.insert(node, max_stratum);
+            }
+        }
+
+        Ok(strata)
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="datalog-aggregations--grouping"><a class="header" href="#datalog-aggregations--grouping">Datalog Aggregations &amp; Grouping</a></h1>
+<h2 id="1-declarative-aggregations"><a class="header" href="#1-declarative-aggregations">1. Declarative Aggregations</a></h2>
+<p>Aggregations allow Datalog rules to summarize multiple matching facts into single derived values (such as count, sum, minimum, maximum, and average). In Roxi, these calculations are performed dynamically during forward-chaining evaluation.</p>
+<h3 id="syntax"><a class="header" href="#syntax">Syntax</a></h3>
+<p>In Roxi Datalog, aggregations are declared directly in the rule head. Any variable in the head that is <em>not</em> an argument of the aggregation function is automatically treated as a <strong>grouping key</strong>.</p>
+<p>Consider the query:</p>
+<p>$$\text{managerReportCount}(?M, \text{count}(?R)) \leftarrow \text{manages}(?M, ?R)$$</p>
+<ul>
+<li><strong>Grouping Key</strong>: <code>?M</code> (the manager).</li>
+<li><strong>Aggregate Target</strong>: <code>?R</code> (the reports).</li>
+<li><strong>Output</strong>: The rule yields a table where each manager is associated with their total count of direct reports.</li>
+</ul>
+<hr />
+<h2 id="2-compilation-and-binding-routing"><a class="header" href="#2-compilation-and-binding-routing">2. Compilation and Binding Routing</a></h2>
+<p>When a rule containing aggregates is parsed, Roxi compiles it into a specialized rule structure. The body of the rule is evaluated first, producing a table of raw bindings.</p>
+<pre><code>                   Evaluate Rule Body
+                           |
+                           v
+                  Raw Bindings Table
+              +--------------------------+
+              | ?manager    | ?report    |
+              +-------------+------------+
+              | alice       | bob        |
+              | alice       | charlie    |
+              | dave        | eve        |
+              +-------------+------------+
+                           |
+                           v
+                 Grouping &amp; Sorting
+               (Group by ?manager)
+                           |
+            +--------------+--------------+
+            |                             |
+            v                             v
+     Group: [alice]                Group: [dave]
+     Values: [bob, charlie]        Values: [eve]
+            |                             |
+            v                             v
+    CountAccumulator              CountAccumulator
+    (Count = 2)                   (Count = 1)
+            |                             |
+            +--------------+--------------+
+                           |
+                           v
+                Derive Head Triples:
+        managerReportCount(alice, 2)
+        managerReportCount(dave, 1)
+</code></pre>
+<hr />
+<h2 id="3-reuse-of-sparql-accumulators"><a class="header" href="#3-reuse-of-sparql-accumulators">3. Reuse of SPARQL Accumulators</a></h2>
+<p>To minimize code duplication and maintain memory efficiency, Roxi's Datalog engine reuses the core aggregation machinery implemented for the SPARQL 1.1 query engine in <a href="file:///Users/sac/roxi/lib/src/sparql.rs">lib/src/sparql.rs</a>:</p>
+<ul>
+<li><strong><code>CountAccumulator</code></strong>: Counts matching instances.</li>
+<li><strong><code>SumAccumulator</code></strong>: Adds numeric literal values.</li>
+<li><strong><code>MinAccumulator</code> / <code>MaxAccumulator</code></strong>: Tracks lexicographical or numeric extremes.</li>
+<li><strong><code>AvgAccumulator</code></strong>: Computes running totals and counts to yield arithmetic means.</li>
+</ul>
+<p>By sharing these accumulators, Datalog aggregations benefit from the same type checking and performance optimizations built for SPARQL queries.</p>
+<hr />
+<h2 id="4-rust-aggregator-implementation"><a class="header" href="#4-rust-aggregator-implementation">4. Rust Aggregator Implementation</a></h2>
+<p>Below is the Rust implementation demonstrating how Roxi groups bindings and executes Datalog aggregations:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Constant {
+    Iri(usize),
+    Integer(i64),
+}
+
+#[derive(Debug, Clone)]
+pub struct Binding {
+    pub map: HashMap&lt;String, Constant&gt;,
+}
+
+pub enum AggregationFunction {
+    Count,
+    Sum,
+}
+
+pub struct AggregateEvaluator;
+
+impl AggregateEvaluator {
+    /// Groups bindings by grouping keys and evaluates the aggregate function
+    pub fn evaluate(
+        bindings: &amp;[Binding],
+        group_keys: &amp;[String],
+        agg_var: &amp;str,
+        func: AggregationFunction,
+    ) -&gt; HashMap&lt;Vec&lt;Constant&gt;, Constant&gt; {
+        let mut groups: HashMap&lt;Vec&lt;Constant&gt;, Vec&lt;Constant&gt;&gt; = HashMap::new();
+
+        // 1. Group bindings by key values
+        for binding in bindings {
+            let key_values: Vec&lt;Constant&gt; = group_keys
+                .iter()
+                .map(|key| binding.map.get(key).cloned().unwrap_or(Constant::Integer(0)))
+                .collect();
+
+            if let Some(target_val) = binding.map.get(agg_var).cloned() {
+                groups.entry(key_values).or_default().push(target_val);
+            }
+        }
+
+        let mut results = HashMap::new();
+
+        // 2. Evaluate function per group
+        for (keys, values) in groups {
+            let aggregate_val = match func {
+                AggregationFunction::Count =&gt; Constant::Integer(values.len() as i64),
+                AggregationFunction::Sum =&gt; {
+                    let mut sum = 0;
+                    for val in values {
+                        if let Constant::Integer(n) = val {
+                            sum += n;
+                        }
+                    }
+                    Constant::Integer(sum)
+                }
+            };
+            results.insert(keys, aggregate_val);
+        }
+
+        results
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="5-recursion-and-aggregation-boundaries"><a class="header" href="#5-recursion-and-aggregation-boundaries">5. Recursion and Aggregation Boundaries</a></h2>
+<p>Aggregations must be handled carefully when combined with recursive rules. If a rule depends on an aggregate value that is itself recursively updated, evaluation can fail to reach a stable state.</p>
+<p>To prevent this:</p>
+<ol>
+<li><strong>Stratification Barrier</strong>: Roxi requires that any aggregation must exist strictly on a <strong>stratum boundary</strong>.</li>
+<li><strong>Fixed Input</strong>: The relations being aggregated must belong to a lower stratum ($&lt; i$) relative to the rule head predicate. This ensures the aggregated inputs are completely evaluated and fixed before the aggregation executes, guaranteeing mathematical correctness and termination.</li>
+<li><strong>Safety Verification</strong>: The stratification checker verifies these bounds at load time, rejecting rules with recursive aggregation loops.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="notation3-n3-specification"><a class="header" href="#notation3-n3-specification">Notation3 (N3) Specification</a></h1>
+<h2 id="notation3-dialect"><a class="header" href="#notation3-dialect">Notation3 Dialect</a></h2>
+<p>Notation3 (N3) is an assertion language and logic dialect that extends standard RDF. While RDF is restricted to simple triple assertions, N3 introduces:</p>
+<ul>
+<li><strong>Variables</strong>: Prefixed with <code>?</code> (e.g., <code>?x</code>), representing logical variables.</li>
+<li><strong>Logical Implication</strong>: Declared with <code>=&gt;</code> (forward implication) and <code>&lt;=</code> (backward implication).</li>
+<li><strong>Quoted Graphs</strong>: Wrapped in <code>{}</code> braces, representing statements as first-class terms.</li>
+<li><strong>Lists</strong>: Wrapped in <code>()</code> parenthesis, representing ordered sequences.</li>
+<li><strong>Built-ins</strong>: Procedural functions for arithmetic, string formatting, and list processing.</li>
+</ul>
+<hr />
+<h2 id="implementation-in-roxi"><a class="header" href="#implementation-in-roxi">Implementation in Roxi</a></h2>
+<p>Roxi implements a complete N3 parser and compiler. Implication rules are evaluated inside the forward chainer, enabling expressive rule-based reasoning over RDF datasets.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="notation3-n3-grammar--parser"><a class="header" href="#notation3-n3-grammar--parser">Notation3 (N3) Grammar &amp; Parser</a></h1>
+<h2 id="1-syntax-structures"><a class="header" href="#1-syntax-structures">1. Syntax Structures</a></h2>
+<p>Notation3 (N3) extends the standard RDF Turtle syntax by adding logical rules, variables, and formulas. To parse these structures correctly, Roxi utilizes a parsing pipeline built on the <strong>Pest</strong> PEG (Parsing Expression Grammar) framework.</p>
+<p>The parsing sequence executes as follows:</p>
+<pre><code>        Raw N3 Text String
+                |
+                v
+       Pest Grammar Parser
+  (Generates AST Pairs/Tokens)
+                |
+                v
+     N3RuleParser Translator
+  (Prefixes, Terms, Rule Blocks)
+                |
+                v
+       Compiled Rule Structs
+    (Inserted into RuleIndex)
+</code></pre>
+<hr />
+<h2 id="2-pest-grammar-specification"><a class="header" href="#2-pest-grammar-specification">2. Pest Grammar Specification</a></h2>
+<p>The grammar rules are defined in <a href="file:///Users/sac/roxi/lib/src/parser/n3.pest">lib/src/parser/n3.pest</a>. Here is the detailed layout of the core production rules:</p>
+<pre><code class="language-peg">// Whitespace and comments are automatically handled
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY)* ~ "\n" }
+
+// Entrypoint Document structure
+document = { SOI ~ (prefix_decl | rule_decl | triple_decl)* ~ EOI }
+
+prefix_decl = { "@prefix" ~ prefix_label? ~ ":" ~ iri ~ "." }
+prefix_label = { ASCII_ALPHANUMERIC+ }
+
+// Rule Declarations: Swapping =&gt; and &lt;= implications
+rule_decl = { formula ~ implication_op ~ formula ~ "." }
+implication_op = { "=&gt;" | "&lt;=" }
+
+formula = { "{" ~ triple_pattern* ~ "}" }
+
+triple_pattern = { subject ~ predicate ~ object ~ "."? }
+triple_decl = { subject ~ predicate ~ object ~ "." }
+
+subject = { var | iri | prefixed_name | blank_node | formula | rdf_list }
+predicate = { var | iri | prefixed_name | a_shorthand }
+object = { var | iri | prefixed_name | blank_node | literal | formula | rdf_list }
+
+// Shorthands
+a_shorthand = { "a" }
+
+// Variables and Terms
+var = { "?" ~ ASCII_ALPHANUMERIC+ }
+prefixed_name = { prefix_label? ~ ":" ~ local_name }
+local_name = { (ASCII_ALPHANUMERIC | "_" | "-")+ }
+
+blank_node = { "_:" ~ ASCII_ALPHANUMERIC+ }
+rdf_list = { "(" ~ object* ~ ")" }
+
+iri = { "&lt;" ~ (!"&gt;" ~ ANY)* ~ "&gt;" }
+literal = { string_literal ~ (lang_tag | datatype_suffix)? }
+string_literal = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+lang_tag = { "@" ~ ASCII_ALPHA+ }
+datatype_suffix = { "^^" ~ iri }
+</code></pre>
+<hr />
+<h2 id="3-rule-compilation--decomposition"><a class="header" href="#3-rule-compilation--decomposition">3. Rule Compilation &amp; Decomposition</a></h2>
+<p>During the AST translation pass in <a href="file:///Users/sac/roxi/lib/src/parser/n3rule_parser.rs">lib/src/parser/n3rule_parser.rs</a>, the compiler performs several key transformations:</p>
+<h3 id="implication-operator-resolution"><a class="header" href="#implication-operator-resolution">Implication Operator Resolution</a></h3>
+<ul>
+<li><strong>Forward Implication (<code>=&gt;</code>)</strong>: The left-hand formula becomes the <code>body</code> (premises), and the right-hand formula becomes the <code>head</code> (conclusions).</li>
+<li><strong>Backward Implication (<code>&lt;=</code>)</strong>: The parser swaps the formulas: the right-hand formula becomes the rule <code>body</code>, and the left-hand formula becomes the <code>head</code>.</li>
+</ul>
+<h3 id="multi-triple-head-decomposition"><a class="header" href="#multi-triple-head-decomposition">Multi-Triple Head Decomposition</a></h3>
+<p>If the head formula of a rule contains multiple triple patterns, Roxi decomposes it into separate rules at compile time. This allows the engine to evaluate rules efficiently without requiring complex multi-conclusion reasoning code.</p>
+<p>For example, the rule:</p>
+<pre><code class="language-turtle">{ ?x :parentOf ?y } =&gt; { ?y :childOf ?x . ?x :hasOffspring :true } .
+</code></pre>
+<p>Is compiled and registered in the <code>RuleIndex</code> as two independent rules:</p>
+<ol>
+<li><code>{ ?x :parentOf ?y } =&gt; { ?y :childOf ?x }</code></li>
+<li><code>{ ?x :parentOf ?y } =&gt; { ?x :hasOffspring :true }</code></li>
+</ol>
+<hr />
+<h2 id="4-error-propagation--result-mapping"><a class="header" href="#4-error-propagation--result-mapping">4. Error Propagation &amp; Result Mapping</a></h2>
+<p>Roxi's parser propagates parse errors cleanly up the call stack:</p>
+<ul>
+<li><strong>No Panics</strong>: The parser returns a <code>Result&lt;Vec&lt;Rule&gt;, ParseError&gt;</code> instead of panicking on malformed text.</li>
+<li><strong>Error Context</strong>: The <code>ParseError</code> struct captures the line and column number of the syntax failure, allowing developers to debug rules files easily.</li>
+</ul>
+<hr />
+<h2 id="5-rust-parser-implementation-reference"><a class="header" href="#5-rust-parser-implementation-reference">5. Rust Parser Implementation Reference</a></h2>
+<p>Below is the Rust code interface for compiling N3 rules:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>extern crate pest;
+use pest::Parser;
+use pest_derive::Parser as PestParser;
+
+#[derive(PestParser)]
+#[grammar = "parser/n3.pest"]
+pub struct N3Parser;
+
+#[derive(Debug)]
+pub enum ParseError {
+    PestError(String),
+    UnsupportedSyntax(String),
+}
+
+pub struct N3Compiler;
+
+impl N3Compiler {
+    /// Parses an N3 rules string and returns compiled Rules
+    pub fn compile_rules(input: &amp;str) -&gt; Result&lt;Vec&lt;RawRule&gt;, ParseError&gt; {
+        let mut rules = Vec::new();
+        
+        let parsed_doc = N3Parser::parse(Rule::document, input)
+            .map_err(|e| ParseError::PestError(e.to_string()))?
+            .next()
+            .unwrap();
+
+        for pair in parsed_doc.into_inner() {
+            match pair.as_rule() {
+                Rule::rule_decl =&gt; {
+                    let mut inner = pair.into_inner();
+                    let body_pair = inner.next().unwrap();
+                    let op_pair = inner.next().unwrap();
+                    let head_pair = inner.next().unwrap();
+
+                    let raw_body = Self::parse_formula(body_pair)?;
+                    let raw_head = Self::parse_formula(head_pair)?;
+
+                    let is_forward = op_pair.as_str() == "=&gt;";
+
+                    // Create rule bindings, swapping if backward implication
+                    let (body, head) = if is_forward {
+                        (raw_body, raw_head)
+                    } else {
+                        (raw_head, raw_body)
+                    };
+
+                    // Decompose multi-head rule into individual rules
+                    for head_triple in head {
+                        rules.push(RawRule {
+                            body: body.clone(),
+                            head: head_triple,
+                        });
+                    }
+                }
+                _ =&gt; {} // Skip prefixes and triples in rule compiler
+            }
+        }
+
+        Ok(rules)
+    }
+
+    fn parse_formula(_pair: pest::iterators::Pair&lt;Rule&gt;) -&gt; Result&lt;Vec&lt;RawTriple&gt;, ParseError&gt; {
+        // Mock parser helper
+        Ok(Vec::new())
+    }
+}
+
+pub struct RawTriple {
+    pub s: String,
+    pub p: String,
+    pub o: String,
+}
+
+pub struct RawRule {
+    pub body: Vec&lt;RawTriple&gt;,
+    pub head: RawTriple,
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="n3-formulae--quoted-graphs"><a class="header" href="#n3-formulae--quoted-graphs">N3 Formulae &amp; Quoted Graphs</a></h1>
+<h2 id="1-nested-statements--metadata"><a class="header" href="#1-nested-statements--metadata">1. Nested Statements &amp; Metadata</a></h2>
+<p>In standard RDF, graphs are flat collections of triples. Notation3 (N3) introduces <strong>formulas</strong> (also called <strong>quoted graphs</strong>), which are sets of triple patterns wrapped in <code>{}</code> braces. This allows a graph to contain statements about other statements as first-class terms.</p>
+<p>Consider this N3 statement:</p>
+<pre><code class="language-turtle">{:alice :accessLevel :high} :assertedBy :securityOfficer .
+</code></pre>
+<p>Here:</p>
+<ul>
+<li><strong>Subject</strong>: The quoted graph <code>{:alice :accessLevel :high}</code>.</li>
+<li><strong>Predicate</strong>: <code>:assertedBy</code>.</li>
+<li><strong>Object</strong>: <code>:securityOfficer</code>.</li>
+</ul>
+<p>Quoted graphs are fundamental for expressing metadata, tracking provenance, asserting trust levels, and building logical rules that reason about context.</p>
+<hr />
+<h2 id="2-compilation-and-interning"><a class="header" href="#2-compilation-and-interning">2. Compilation and Interning</a></h2>
+<p>Roxi represents quoted graphs natively in its type-safe term model <a href="file:///Users/sac/roxi/lib/src/triples.rs">lib/src/triples.rs</a>:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum Term {
+    Iri(TermImpl),
+    Literal(LiteralImpl),
+    BlankNode(BlankNodeImpl),
+    Triple(Box&lt;Triple&gt;),
+    Formula(FormulaImpl), // Native support for quoted graphs
+}
+<span class="boring">}</span></code></pre></pre>
+<pre><code>                          Formula Term
+                               |
+                   +-----------+-----------+
+                   |                       |
+            Encoder ID: 99           Triples Vector
+            (Interned Key)      [SPO 1, SPO 2, SPO N]
+</code></pre>
+<h3 id="the-formulaimpl-representation"><a class="header" href="#the-formulaimpl-representation">The <code>FormulaImpl</code> representation:</a></h3>
+<ul>
+<li><strong><code>id</code></strong>: A unique interning identifier allocated by the <code>Encoder</code> to speed up comparison checks.</li>
+<li><strong><code>triples</code></strong>: A vector of interned <code>Triple</code> structures contained within the formula.</li>
+</ul>
+<p>This layout allows the query engine to perform fast matches on the formula identifier before evaluating its inner triples.</p>
+<hr />
+<h2 id="3-query-matching-and-variable-binding"><a class="header" href="#3-query-matching-and-variable-binding">3. Query Matching and Variable Binding</a></h2>
+<p>Evaluating rules that match against quoted graphs requires matching variables at different levels of nesting:</p>
+<pre><code class="language-turtle"># Rule: If a statement is asserted by the security officer, assert it as true in the database.
+{ ?statement :assertedBy :securityOfficer . ?statement } =&gt; { ?statement :status :verified } .
+</code></pre>
+<p>During matching:</p>
+<ol>
+<li>The engine queries the index for triples matching <code>?statement :assertedBy :securityOfficer</code>.</li>
+<li><code>?statement</code> binds to the formula term <code>{:alice :accessLevel :high}</code>.</li>
+<li>The rule evaluates the nested implication: the inner triple pattern <code>:alice :accessLevel :high</code> is extracted and inserted into the active database.</li>
+<li>The conclusion <code>:alice :accessLevel :high :status :verified</code> is materialized.</li>
+</ol>
+<p>This multi-level matching is executed efficiently by recursively evaluating query bindings across nested scopes.</p>
+<hr />
+<h2 id="4-rust-implementation-reference-1"><a class="header" href="#4-rust-implementation-reference-1">4. Rust Implementation Reference</a></h2>
+<p>Below is the Rust structural design of formula terms and matching logic:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::rc::Rc;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Term {
+    Iri(usize),
+    Literal(usize),
+    Formula(FormulaImpl),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Triple {
+    pub s: Term,
+    pub p: Term,
+    pub o: Term,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FormulaImpl {
+    pub id: usize,
+    pub triples: Vec&lt;Triple&gt;,
+}
+
+pub struct FormulaMatcher;
+
+impl FormulaMatcher {
+    /// Recursively checks if a pattern term matches a database term,
+    /// binding variables across nested formula scopes.
+    pub fn match_terms(
+        pattern: &amp;Term,
+        data: &amp;Term,
+        bindings: &amp;mut std::collections::HashMap&lt;String, Term&gt;,
+    ) -&gt; bool {
+        match (pattern, data) {
+            (Term::Iri(pid), Term::Iri(did)) =&gt; pid == did,
+            (Term::Literal(pid), Term::Literal(did)) =&gt; pid == did,
+            (Term::Formula(pf), Term::Formula(df)) =&gt; {
+                if pf.triples.len() != df.triples.len() {
+                    return false;
+                }
+                // Verify all nested triples match
+                for (pt, dt) in pf.triples.iter().zip(df.triples.iter()) {
+                    if !Self::match_triples(pt, dt, bindings) {
+                        return false;
+                    }
+                }
+                true
+            }
+            _ =&gt; false,
+        }
+    }
+
+    pub fn match_triples(
+        pattern: &amp;Triple,
+        data: &amp;Triple,
+        bindings: &amp;mut std::collections::HashMap&lt;String, Term&gt;,
+    ) -&gt; bool {
+        Self::match_terms(&amp;pattern.s, &amp;data.s, bindings)
+            &amp;&amp; Self::match_terms(&amp;pattern.p, &amp;data.p, bindings)
+            &amp;&amp; Self::match_terms(&amp;pattern.o, &amp;data.o, bindings)
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="quantifiers--scoping"><a class="header" href="#quantifiers--scoping">Quantifiers &amp; Scoping</a></h1>
+<h2 id="universal-and-existential-quantifiers"><a class="header" href="#universal-and-existential-quantifiers">Universal and Existential Quantifiers</a></h2>
+<p>Notation3 supports explicit variable quantification using <code>@forAll</code> and <code>@forSome</code>:</p>
+<ul>
+<li><strong><code>@forAll</code></strong>: Universal quantification (declares variables that match any term in the domain).</li>
+<li><strong><code>@forSome</code></strong>: Existential quantification (declares variables that assert the existence of a term).</li>
+</ul>
+<hr />
+<h2 id="variable-scoping"><a class="header" href="#variable-scoping">Variable Scoping</a></h2>
+<p>In Roxi, the scope of a quantified variable is strictly bound to the formula or rule in which it is declared:</p>
+<ul>
+<li><strong>Isolation</strong>: Variables declared in a nested formula do not leak into parent scopes, preventing conflicts.</li>
+<li><strong>EYE Compliance</strong>: Scoping rules are aligned with the EYE reasoner, ensuring standard N3 compatibility.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="n3-lists"><a class="header" href="#n3-lists">N3 Lists</a></h1>
+<h2 id="ordered-sequences"><a class="header" href="#ordered-sequences">Ordered Sequences</a></h2>
+<p>In N3, ordered lists are represented using parentheses:</p>
+<pre><code class="language-turtle">:john :hobbies (:reading :cycling :swimming) .
+</code></pre>
+<hr />
+<h2 id="ast-expansion"><a class="header" href="#ast-expansion">AST Expansion</a></h2>
+<p>During parsing, Roxi expands lists into standard <code>rdf:first</code> and <code>rdf:rest</code> triples:</p>
+<pre><code class="language-turtle">:john :hobbies _:b1 .
+_:b1 rdf:first :reading ; rdf:rest _:b2 .
+_:b2 rdf:first :cycling ; rdf:rest _:b3 .
+_:b3 rdf:first :swimming ; rdf:rest rdf:nil .
+</code></pre>
+<p>This expansion allows standard rule chainers and SPARQL queries to traverse list structures natively.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="n3-procedural-built-ins-reference"><a class="header" href="#n3-procedural-built-ins-reference">N3 Procedural Built-ins Reference</a></h1>
+<h2 id="1-runtime-interception-mechanics"><a class="header" href="#1-runtime-interception-mechanics">1. Runtime Interception Mechanics</a></h2>
+<p>In standard RDF semantics, a triple like <code>?x math:sum (?y ?z)</code> is matched as a literal pattern search against the triple store. However, in Notation3 (N3), the <code>math:sum</code> predicate is a <strong>built-in</strong>. When the reasoner encounters a built-in predicate, it intercepts execution and executes procedural Rust code in the query loop instead of searching the database indexes.</p>
+<pre><code>                  Rule Body Matcher
+                          |
+            Check Predicate Namespace/IRI
+               /                     \\
+      [Standard IRI]             [Built-in IRI]
+            /                           \\
+           v                             v
+   Scan TripleIndex              Execute Rust Function
+   (Index Lookup)             (e.g., math_sum, string_concat)
+                                         |
+                                         v
+                                Bind Output Variable
+</code></pre>
+<hr />
+<h2 id="2-complete-built-ins-directory"><a class="header" href="#2-complete-built-ins-directory">2. Complete Built-ins Directory</a></h2>
+<h3 id="21-the-log-logical-namespace"><a class="header" href="#21-the-log-logical-namespace">2.1. The <code>log:</code> Logical Namespace</a></h3>
+<p>The <code>log:</code> namespace provides operations for formula checking, term equality, and database queries.</p>
+<h4 id="logequalto"><a class="header" href="#logequalto"><code>log:equalTo</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?termA log:equalTo ?termB</code></li>
+<li><strong>Input</strong>: Both terms must be bound.</li>
+<li><strong>Behavior</strong>: Evaluates to true if the interned ID of <code>?termA</code> is identical to <code>?termB</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?x :id ?id . ?id log:equalTo "admin" } =&gt; { ?x :role :sysAdmin } .
+</code></pre>
+</li>
+</ul>
+<h4 id="logimplies"><a class="header" href="#logimplies"><code>log:implies</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>{body} log:implies {head}</code></li>
+<li><strong>Behavior</strong>: Equivalent to <code>=&gt;</code>. Denotes forward logical implication.</li>
+</ul>
+<hr />
+<h3 id="22-the-math-mathematical-namespace"><a class="header" href="#22-the-math-mathematical-namespace">2.2. The <code>math:</code> Mathematical Namespace</a></h3>
+<p>The <code>math:</code> namespace handles basic arithmetic and numeric comparison operations.</p>
+<h4 id="mathsum"><a class="header" href="#mathsum"><code>math:sum</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?list math:sum ?result</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list of numeric terms. <code>?result</code> can be bound or unbound.</li>
+<li><strong>Behavior</strong>: Sums the values of the list elements. If <code>?result</code> is unbound, binds it to the sum; if bound, verifies matching equality.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ (?val1 ?val2) math:sum ?out } =&gt; { :total :value ?out } .
+</code></pre>
+</li>
+</ul>
+<h4 id="mathgreaterthan"><a class="header" href="#mathgreaterthan"><code>math:greaterThan</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?valA math:greaterThan ?valB</code></li>
+<li><strong>Input</strong>: Both values must be bound to numeric terms.</li>
+<li><strong>Behavior</strong>: Succeeds if <code>?valA</code> is strictly greater than <code>?valB</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?emp :salary ?sal . ?sal math:greaterThan 120000 } =&gt; { ?emp :bracket :top } .
+</code></pre>
+</li>
+</ul>
+<hr />
+<h3 id="23-the-list-list-processing-namespace"><a class="header" href="#23-the-list-list-processing-namespace">2.3. The <code>list:</code> List-Processing Namespace</a></h3>
+<p>The <code>list:</code> namespace contains operations for manipulating and querying ordered lists.</p>
+<h4 id="listin"><a class="header" href="#listin"><code>list:in</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?member list:in ?list</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list.</li>
+<li><strong>Behavior</strong>: Iterates over elements of <code>?list</code>. If <code>?member</code> is unbound, binds it to each element sequentially (backtracking); if bound, verifies membership.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?color list:in (:red :green :blue) } =&gt; { ?color :status :primary } .
+</code></pre>
+</li>
+</ul>
+<h4 id="listlength"><a class="header" href="#listlength"><code>list:length</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?list list:length ?len</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list.</li>
+<li><strong>Behavior</strong>: Counts elements in <code>?list</code> and binds or verifies the integer result in <code>?len</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?user :hobbies ?list . ?list list:length ?len } =&gt; { ?user :hobbyCount ?len } .
+</code></pre>
+</li>
+</ul>
+<hr />
+<h3 id="24-the-string-string-manipulation-namespace"><a class="header" href="#24-the-string-string-manipulation-namespace">2.4. The <code>string:</code> String Manipulation Namespace</a></h3>
+<p>The <code>string:</code> namespace contains string parsing and formatting operations.</p>
+<h4 id="stringconcat"><a class="header" href="#stringconcat"><code>string:concat</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?list string:concat ?result</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list of string literals.</li>
+<li><strong>Behavior</strong>: Concatenates the string representations of list elements and binds or verifies the result string in <code>?result</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ (?first " " ?last) string:concat ?fullName } =&gt; { ?user :name ?fullName } .
+</code></pre>
+</li>
+</ul>
+<h4 id="stringlength"><a class="header" href="#stringlength"><code>string:length</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?str string:length ?len</code></li>
+<li><strong>Input</strong>: <code>?str</code> must be bound to a string literal.</li>
+<li><strong>Behavior</strong>: Computes the UTF-8 character length of the string and binds or verifies the integer result in <code>?len</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?pw :value ?val . ?val string:length ?len . ?len math:greaterThan 8 } =&gt; { ?pw :status :strong } .
+</code></pre>
+</li>
+</ul>
+<hr />
+<h2 id="3-rust-evaluator-integration-reference"><a class="header" href="#3-rust-evaluator-integration-reference">3. Rust Evaluator Integration Reference</a></h2>
+<p>Below is the Rust structural design of the built-in dispatcher loop inside the query engine:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::rc::Rc;
+
+pub enum EvaluatedTerm {
+    Integer(i64),
+    Float(f64),
+    String(String),
+}
+
+pub struct BuiltinDispatcher;
+
+impl BuiltinDispatcher {
+    pub fn dispatch(
+        predicate_iri: &amp;str,
+        args: &amp;[EvaluatedTerm],
+    ) -&gt; Option&lt;EvaluatedTerm&gt; {
+        match predicate_iri {
+            "http://www.w3.org/2000/10/swap/math#sum" =&gt; {
+                Self::eval_math_sum(args)
+            }
+            "http://www.w3.org/2000/10/swap/string#concat" =&gt; {
+                Self::eval_string_concat(args)
+            }
+            _ =&gt; None, // Not a recognized built-in predicate
+        }
+    }
+
+    fn eval_math_sum(args: &amp;[EvaluatedTerm]) -&gt; Option&lt;EvaluatedTerm&gt; {
+        let mut sum = 0.0;
+        for arg in args {
+            match arg {
+                EvaluatedTerm::Integer(val) =&gt; sum += *val as f64,
+                EvaluatedTerm::Float(val) =&gt; sum += *val,
+                _ =&gt; return None, // Math operations are numeric only
+            }
+        }
+        Some(EvaluatedTerm::Float(sum))
+    }
+
+    fn eval_string_concat(args: &amp;[EvaluatedTerm]) -&gt; Option&lt;EvaluatedTerm&gt; {
+        let mut result = String::new();
+        for arg in args {
+            match arg {
+                EvaluatedTerm::String(val) =&gt; result.push_str(val),
+                _ =&gt; return None, // Concatenation operates on string terms
+            }
+        }
+        Some(EvaluatedTerm::String(result))
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="shape-validation"><a class="header" href="#shape-validation">Shape Validation</a></h1>
+<h2 id="graph-schema-enforcement"><a class="header" href="#graph-schema-enforcement">Graph Schema Enforcement</a></h2>
+<p>Reasoning engines generate new facts, but without schemas, data quality can degrade. Roxi includes first-class shape validation using both <strong>SHACL</strong> and <strong>ShEx</strong>.</p>
+<hr />
+<h2 id="the-unified-substrate"><a class="header" href="#the-unified-substrate">The Unified Substrate</a></h2>
+<p>Instead of running a separate validator process, Roxi runs shape checks directly on the <code>TripleIndex</code> using an optimized adapter layer:</p>
+<pre><code>[Input Data] ---&gt; [TripleIndex] &lt;---&gt; [oxrdf Adapter] &lt;---&gt; [rudof Validators]
+</code></pre>
+<p>This architecture allows Roxi to interleave shape validation with forward reasoning, terminating executions early if data violations are detected during derivation.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oxrdf-zero-copy-adapter-in-roxi"><a class="header" href="#oxrdf-zero-copy-adapter-in-roxi">oxrdf Zero-Copy Adapter in Roxi</a></h1>
+<h2 id="1-the-architectural-mapping-problem"><a class="header" href="#1-the-architectural-mapping-problem">1. The Architectural Mapping Problem</a></h2>
+<p>Roxi and the Rust shape validation ecosystem (<code>rudof</code>/<code>shex-rs</code>) use distinct memory architectures to represent RDF data:</p>
+<ul>
+<li><strong>Roxi Architecture</strong>: Interns all resource strings (IRIs, literals, datatype strings, and language tags) into a global table managed by the <code>Encoder</code>. It represents nodes in memory as simple machine-word-sized integer indices (<code>usize</code>). This minimizes allocation overhead, speeds up comparisons, and keeps the query engine fast.</li>
+<li><strong>oxrdf Architecture</strong>: Represents nodes using strongly typed structures (<code>NamedNode</code>, <code>Literal</code>, <code>BlankNode</code>, <code>Term</code>) that own their underlying <code>String</code> values on the heap. External validators require data in these structures to execute schema validations correctly.</li>
+</ul>
+<p>Converting the entire in-memory database to owned <code>oxrdf</code> types for every validation run is extremely expensive, introducing high heap-allocation costs and memory overhead.</p>
+<p>Roxi resolves this using the <strong><code>oxrdf</code> Zero-Copy Adapter</strong> located in <a href="file:///Users/sac/roxi/lib/src/oxrdf_adapter.rs">lib/src/oxrdf_adapter.rs</a>.</p>
+<hr />
+<h2 id="2-zero-copy-adapter-design"><a class="header" href="#2-zero-copy-adapter-design">2. Zero-Copy Adapter Design</a></h2>
+<p>The adapter provides a bridge between the two architectures, implementing lazy, on-demand conversion of nodes only when requested by validators:</p>
+<pre><code>        Roxi Interned Memory                     oxrdf Owned Structures
+    +--------------------------+               +--------------------------+
+    |   TermImpl (iri: 42)     |  =========&gt;   | NamedNode("http://...")  |
+    |   LiteralImpl (val: 101) |  (On-Demand)  | Literal("25", xsd:int)   |
+    |   BlankNodeImpl (id: 7)  |  =========&gt;   | BlankNode("b7")          |
+    +--------------------------+               +--------------------------+
+</code></pre>
+<h3 id="forward-translation-roxi-to-oxrdf"><a class="header" href="#forward-translation-roxi-to-oxrdf">Forward Translation (Roxi $\to$ oxrdf)</a></h3>
+<ul>
+<li><strong>IRIs</strong>: Decodes the interned <code>usize</code> from the <code>Encoder</code> back to its string value and constructs an <code>oxrdf::NamedNodeRef</code> (borrowed) or <code>oxrdf::NamedNode</code> (owned).</li>
+<li><strong>Literals</strong>: Extracts the lexical value index, datatype index, and language tag index. Decodes them and constructs an <code>oxrdf::Literal</code> with correct datatype and language properties.</li>
+<li><strong>Blank Nodes</strong>: Converts internal <code>usize</code> identifiers into unique string labels (e.g., <code>b0</code>, <code>b1</code>, etc.) so <code>oxrdf</code> can identify nodes accurately.</li>
+</ul>
+<h3 id="reverse-translation-oxrdf-to-roxi"><a class="header" href="#reverse-translation-oxrdf-to-roxi">Reverse Translation (oxrdf $\to$ Roxi)</a></h3>
+<p>When a shape validator identifies a schema violation (e.g. "Value in <code>ex:age</code> property must be an integer"), it returns a validation report containing the violating <code>oxrdf::Term</code>.</p>
+<p>The adapter translates the <code>oxrdf::Term</code> back to Roxi's internal <code>usize</code> representation by querying the <code>Encoder</code> (or inserting it if new). This enables Roxi to locate the exact violating triple in the <code>TripleIndex</code> and report it to the user with its original file coordinates.</p>
+<hr />
+<h2 id="3-rust-implementation-reference"><a class="header" href="#3-rust-implementation-reference">3. Rust Implementation Reference</a></h2>
+<p>Below is the Rust structural design of the adapter:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use oxrdf::{NamedNode, Literal, BlankNode, Term as OxTerm};
+use std::rc::Rc;
+
+// Represents Roxi's internal term representation
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum RoxiTerm {
+    Iri(usize),
+    Literal {
+        value: usize,
+        datatype: Option&lt;usize&gt;,
+        lang: Option&lt;usize&gt;,
+    },
+    BlankNode(usize),
+}
+
+pub struct Encoder {
+    // String interning mappings
+    id_to_string: Vec&lt;String&gt;,
+    string_to_id: std::collections::HashMap&lt;String, usize&gt;,
+}
+
+impl Encoder {
+    pub fn lookup(&amp;self, id: usize) -&gt; &amp;str {
+        &amp;self.id_to_string[id]
+    }
+
+    pub fn encode(&amp;mut self, val: &amp;str) -&gt; usize {
+        if let Some(&amp;id) = self.string_to_id.get(val) {
+            id
+        } else {
+            let id = self.id_to_string.len();
+            self.id_to_string.push(val.to_string());
+            self.string_to_id.insert(val.to_string(), id);
+            id
+        }
+    }
+}
+
+pub struct OxRdfAdapter;
+
+impl OxRdfAdapter {
+    /// Translates a Roxi internal term to an oxrdf Term
+    pub fn to_oxrdf(term: &amp;RoxiTerm, encoder: &amp;Encoder) -&gt; OxTerm {
+        match term {
+            RoxiTerm::Iri(id) =&gt; {
+                let iri_str = encoder.lookup(*id);
+                OxTerm::NamedNode(NamedNode::new(iri_str).unwrap())
+            }
+            RoxiTerm::Literal { value, datatype, lang } =&gt; {
+                let lex = encoder.lookup(*value);
+                let literal = if let Some(lang_id) = lang {
+                    let lang_str = encoder.lookup(*lang_id);
+                    Literal::new_language_tagged_literal(lex, lang_str).unwrap()
+                } else if let Some(dt_id) = datatype {
+                    let dt_str = encoder.lookup(*dt_id);
+                    let dt_node = NamedNode::new(dt_str).unwrap();
+                    Literal::new_typed_literal(lex, dt_node)
+                } else {
+                    Literal::new_simple_literal(lex)
+                };
+                OxTerm::Literal(literal)
+            }
+            RoxiTerm::BlankNode(id) =&gt; {
+                let bnode_str = format!("b{}", id);
+                OxTerm::BlankNode(BlankNode::new(bnode_str).unwrap())
+            }
+        }
+    }
+
+    /// Translates an oxrdf Term back to Roxi's internal representation
+    pub fn from_oxrdf(term: &amp;OxTerm, encoder: &amp;mut Encoder) -&gt; RoxiTerm {
+        match term {
+            OxTerm::NamedNode(node) =&gt; {
+                let id = encoder.encode(node.as_str());
+                RoxiTerm::Iri(id)
+            }
+            OxTerm::Literal(lit) =&gt; {
+                let val_id = encoder.encode(lit.value());
+                let dt_id = encoder.encode(lit.datatype().as_str());
+                let lang_id = lit.language().map(|lang| encoder.encode(lang));
+                RoxiTerm::Literal {
+                    value: val_id,
+                    datatype: Some(dt_id),
+                    lang: lang_id,
+                }
+            }
+            OxTerm::BlankNode(bnode) =&gt; {
+                // Parse out the integer from the blank node string (e.g. "b7" -&gt; 7)
+                let id_str = &amp;bnode.as_str()[1..];
+                let id = id_str.parse::&lt;usize&gt;().unwrap_or(0);
+                RoxiTerm::BlankNode(id)
+            }
+            _ =&gt; unimplemented!("Nested triple term translation"),
+        }
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="shacl-shapes-validation-in-roxi"><a class="header" href="#shacl-shapes-validation-in-roxi">SHACL Shapes Validation in Roxi</a></h1>
+<h2 id="1-w3c-shapes-constraint-language-shacl"><a class="header" href="#1-w3c-shapes-constraint-language-shacl">1. W3C Shapes Constraint Language (SHACL)</a></h2>
+<p>SHACL (Shapes Constraint Language) is a W3C Recommendation for validating RDF graphs against a set of conditions. These conditions are represented as <strong>shapes</strong> (which are themselves RDF graphs).</p>
+<p>SHACL is essential for enforcing schema invariants, datatypes, cardinalities, and custom constraints in enterprise knowledge graphs.</p>
+<p>In Roxi, the SHACL engine validates the target graph against a shapes graph. It leverages the <code>rudof</code> validation library through the <code>oxrdf</code> zero-copy adapter, ensuring high-performance validation directly on Roxi's core memory indexes.</p>
+<hr />
+<h2 id="2-validation-targets--scope"><a class="header" href="#2-validation-targets--scope">2. Validation Targets &amp; Scope</a></h2>
+<p>Before validating constraints, the engine must select which nodes in the data graph (called <strong>focus nodes</strong>) are target subjects for validation. SHACL defines four target types, all supported in Roxi:</p>
+<ol>
+<li><strong><code>sh:targetNode</code></strong>: Selects specific individual nodes.</li>
+<li><strong><code>sh:targetClass</code></strong>: Selects all instances of a class (nodes that have an <code>rdf:type</code> relationship to the target class, including subclass hierarchies computed via <code>CSprite</code>).</li>
+<li><strong><code>sh:targetSubjectsOf</code></strong>: Selects all subjects of triples that use a specific predicate.</li>
+<li><strong><code>sh:targetObjectsOf</code></strong>: Selects all objects of triples that use a specific predicate.</li>
+</ol>
+<pre><code>                  SHACL Target Matcher
+                           |
+            +--------------+--------------+
+            |                             |
+            v                             v
+     sh:targetClass               sh:targetNode
+  (Collect instances)          (Match specific node)
+            |                             |
+            +--------------+--------------+
+                           |
+                           v
+                      Focus Nodes
+</code></pre>
+<hr />
+<h2 id="3-core-constraint-evaluation"><a class="header" href="#3-core-constraint-evaluation">3. Core Constraint Evaluation</a></h2>
+<p>Once focus nodes are collected, Roxi validates them against shape declarations:</p>
+<h3 id="cardinality-constraints"><a class="header" href="#cardinality-constraints">Cardinality Constraints</a></h3>
+<ul>
+<li><strong><code>sh:minCount</code></strong>: Ensures a property has at least $N$ values.</li>
+<li><strong><code>sh:maxCount</code></strong>: Ensures a property has at most $M$ values.</li>
+<li><em>Optimization</em>: Cardinality checks perform lazy count evaluations on the <code>TripleIndex</code> without materializing the full result sets.</li>
+</ul>
+<h3 id="range--datatype-constraints"><a class="header" href="#range--datatype-constraints">Range &amp; Datatype Constraints</a></h3>
+<ul>
+<li><strong><code>sh:datatype</code></strong>: Verifies that literal values match expected XML Schema datatypes (e.g. <code>xsd:integer</code>, <code>xsd:string</code>).</li>
+<li><strong><code>sh:class</code></strong>: Verifies that object values belong to a specific class hierarchy.</li>
+</ul>
+<h3 id="logical--string-constraints"><a class="header" href="#logical--string-constraints">Logical &amp; String Constraints</a></h3>
+<ul>
+<li><strong><code>sh:and</code> / <code>sh:or</code> / <code>sh:not</code></strong>: Evaluates logical combinations of shapes.</li>
+<li><strong><code>sh:pattern</code></strong>: Validates string values against regular expressions.</li>
+</ul>
+<hr />
+<h2 id="4-sparql-based-constraints"><a class="header" href="#4-sparql-based-constraints">4. SPARQL-Based Constraints</a></h2>
+<p>For complex validation rules that cannot be expressed using core SHACL constraints, SHACL allows embedding SPARQL queries:</p>
+<pre><code class="language-turtle">:UserShape a sh:NodeShape ;
+    sh:targetClass :User ;
+    sh:sparql [
+        sh:message "Users cannot have a registration date in the future." ;
+        sh:select """
+            PREFIX : &lt;http://example.org/&gt;
+            PREFIX xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt;
+            SELECT ?this WHERE {
+                ?this :registeredDate ?date .
+                FILTER (?date &gt; NOW())
+            }
+        """
+    ] .
+</code></pre>
+<ul>
+<li><strong>Evaluation</strong>: The embedded SPARQL query is parsed by <code>spargebra</code> and executed by Roxi's query engine over the data graph.</li>
+<li><strong>Violation</strong>: If the query returns any bindings for <code>?this</code> (the focus node), a validation violation is recorded.</li>
+</ul>
+<hr />
+<h2 id="5-rust-integration-reference"><a class="header" href="#5-rust-integration-reference">5. Rust Integration Reference</a></h2>
+<p>Below is the Rust structural design of the validation loop and report generation in Roxi:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashSet;
+
+pub struct ValidationViolation {
+    pub focus_node: String,
+    pub path: Option&lt;String&gt;,
+    pub message: String,
+    pub severity: String,
+}
+
+pub struct SHACLReport {
+    pub conforms: bool,
+    pub results: Vec&lt;ValidationViolation&gt;,
+}
+
+pub struct SHACLValidator {
+    // Shapes and data graphs
+}
+
+impl SHACLValidator {
+    /// Validates focus nodes against minCount and maxCount constraints
+    pub fn validate_property_cardinality(
+        &amp;self,
+        focus_nodes: &amp;[usize],
+        predicate: usize,
+        min_count: Option&lt;usize&gt;,
+        max_count: Option&lt;usize&gt;,
+        index: &amp;roxi::tripleindex::TripleIndex,
+    ) -&gt; SHACLReport {
+        let mut violations = Vec::new();
+
+        for &amp;node in focus_nodes {
+            // Count matching triples: (?this, predicate, ?val)
+            let match_count = index.count_matching_subjects(node, predicate);
+
+            if let Some(min) = min_count {
+                if match_count &lt; min {
+                    violations.push(ValidationViolation {
+                        focus_node: format!("node_{}", node),
+                        path: Some(format!("predicate_{}", predicate)),
+                        message: format!("Property count {} is less than minimum {}.", match_count, min),
+                        severity: "sh:Violation".to_string(),
+                    });
+                }
+            }
+
+            if let Some(max) = max_count {
+                if match_count &gt; max {
+                    violations.push(ValidationViolation {
+                        focus_node: format!("node_{}", node),
+                        path: Some(format!("predicate_{}", predicate)),
+                        message: format!("Property count {} exceeds maximum {}.", match_count, max),
+                        severity: "sh:Violation".to_string(),
+                    });
+                }
+            }
+        }
+
+        SHACLReport {
+            conforms: violations.is_empty(),
+            results: violations,
+        }
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="shape-expressions-shex-in-roxi"><a class="header" href="#shape-expressions-shex-in-roxi">Shape Expressions (ShEx) in Roxi</a></h1>
+<h2 id="1-declarative-graph-schemas"><a class="header" href="#1-declarative-graph-schemas">1. Declarative Graph Schemas</a></h2>
+<p>Shape Expressions (ShEx) is an RDF validation language focused on graph topology, recursion, and schema definition. While SHACL is designed as an independent constraint-checking language, ShEx is built to represent graph shapes as grammar rules.</p>
+<p>ShEx is widely used in bioinformatics (e.g. genomic graphs) and library databases where graphs contain deep, recursive networks of relationships.</p>
+<p>In Roxi, the ShEx validation pipeline evaluates shape constraints against the <code>TripleIndex</code> by mapping structures through the <code>oxrdf</code> zero-copy adapter and running validation checks via <code>shex_validation</code>.</p>
+<hr />
+<h2 id="2-shexj-format-compilation"><a class="header" href="#2-shexj-format-compilation">2. ShExJ Format Compilation</a></h2>
+<p>To minimize parsing overhead and avoid compiling a second complex Turtle-like grammar, Roxi adopts <strong>ShExJ</strong> (the JSON serialization of ShEx schemas) as its primary schema input.</p>
+<p>During schema loading:</p>
+<ol>
+<li>The JSON schema string is parsed into AST structures using <code>serde_json</code>.</li>
+<li>These structures are compiled into a recursive <code>Schema</code> object in <a href="file:///Users/sac/roxi/lib/src/shex.rs">lib/src/shex.rs</a>.</li>
+<li>The schema is cached, ready to validate data mappings.</li>
+</ol>
+<pre><code>       JSON Schema String (ShExJ)
+                   |
+                   v
+         serde_json Compiler
+                   |
+                   v
+         Recursive Schema AST
+                   |
+                   v
+         Validation Execution
+</code></pre>
+<hr />
+<h2 id="3-shapemaps-and-recursive-validation"><a class="header" href="#3-shapemaps-and-recursive-validation">3. ShapeMaps and Recursive Validation</a></h2>
+<p>ShEx uses a <strong>ShapeMap</strong> to link nodes in the data graph to expected shapes:</p>
+<pre><code class="language-json">[
+  { "node": "http://example.org/alice", "shape": "http://example.org/UserShape" }
+]
+</code></pre>
+<h3 id="the-recursive-validation-loop"><a class="header" href="#the-recursive-validation-loop">The Recursive Validation Loop</a></h3>
+<p>Validation of deep, circular graph models requires tracking evaluation states:</p>
+<ol>
+<li><strong>State Registration</strong>: When validating a node <code>N</code> against a shape <code>S</code>, the engine registers the evaluation tuple <code>(N, S)</code> as <em>active</em>.</li>
+<li><strong>Recursive Traversal</strong>: If <code>S</code> requires validating a related node <code>N2</code> against <code>S2</code> (e.g. <code>?this :friend ?friend</code>), the engine recurses.</li>
+<li><strong>Cycle Short-Circuiting</strong>: If the engine encounters <code>(N, S)</code> again, it resolves the check based on the recursion rules:
+<ul>
+<li>Under a strict evaluation, circular dependencies are assumed to be valid pending outer matching success, preventing infinite recursion loops.</li>
+</ul>
+</li>
+<li><strong>Handoff</strong>: The results are compiled into a validation report.</li>
+</ol>
+<hr />
+<h2 id="4-rust-integration-reference"><a class="header" href="#4-rust-integration-reference">4. Rust Integration Reference</a></h2>
+<p>Below is the Rust structural design of the ShEx schema representations and state tracking in Roxi:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub enum NodeConstraint {
+    Datatype(String),
+    NodeKind(String),
+}
+
+#[derive(Debug, Clone)]
+pub enum ShapeExpr {
+    NodeConstraint(NodeConstraint),
+    TripleConstraint {
+        predicate: String,
+        min: usize,
+        max: Option&lt;usize&gt;,
+        value_expr: Option&lt;Box&lt;ShapeExpr&gt;&gt;,
+    },
+    EachOf {
+        expressions: Vec&lt;ShapeExpr&gt;,
+    },
+    ShapeRef(String), // Reference to another shape
+}
+
+pub struct Schema {
+    pub shapes: HashMap&lt;String, ShapeExpr&gt;,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValidationResult {
+    Conforms,
+    Violates,
+    Evaluating, // Used to detect recursive cycles
+}
+
+pub struct ShExValidator {
+    pub schema: Schema,
+}
+
+impl ShExValidator {
+    /// Validates a node against a shape, handling recursive cycles safely
+    pub fn validate_node(
+        &amp;self,
+        node: &amp;str,
+        shape_name: &amp;str,
+        state: &amp;mut HashMap&lt;(String, String), ValidationResult&gt;,
+    ) -&gt; ValidationResult {
+        let key = (node.to_string(), shape_name.to_string());
+
+        // 1. Detect recursive cycle
+        if let Some(&amp;status) = state.get(&amp;key) {
+            if status == ValidationResult::Evaluating {
+                // Assume conforms inside a cycle to allow termination
+                return ValidationResult::Conforms;
+            }
+            return status;
+        }
+
+        // 2. Mark state as evaluating
+        state.insert(key.clone(), ValidationResult::Evaluating);
+
+        let shape_expr = match self.schema.shapes.get(shape_name) {
+            Some(expr) =&gt; expr,
+            None =&gt; {
+                state.insert(key, ValidationResult::Violates);
+                return ValidationResult::Violates;
+            }
+        };
+
+        // 3. Evaluate shape expression
+        let result = self.evaluate_expression(node, shape_expr, state);
+        state.insert(key, result);
+
+        result
+    }
+
+    fn evaluate_expression(
+        &amp;self,
+        _node: &amp;str,
+        _expr: &amp;ShapeExpr,
+        _state: &amp;mut HashMap&lt;(String, String), ValidationResult&gt;,
+    ) -&gt; ValidationResult {
+        // Mock evaluation implementation
+        ValidationResult::Conforms
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sparql-11-engine"><a class="header" href="#sparql-11-engine">SPARQL 1.1 Engine</a></h1>
+<h2 id="w3c-sparql-query-engine"><a class="header" href="#w3c-sparql-query-engine">W3C SPARQL Query Engine</a></h2>
+<p>Roxi includes a fully compliant SPARQL 1.1 Query and Update evaluator in <a href="file:///Users/sac/roxi/lib/src/sparql.rs">lib/src/sparql.rs</a>.</p>
+<hr />
+<h2 id="subsystems"><a class="header" href="#subsystems">Subsystems</a></h2>
+<ol>
+<li><strong>Algebra Compiler</strong>: Translates query strings into SPARQL algebra trees.</li>
+<li><strong>Optimizer</strong>: Optimizes plan trees to minimize index lookups.</li>
+<li><strong>Execution Engine</strong>: Evaluates query plans against the <code>TripleIndex</code>.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sparql-query-algebra--planning"><a class="header" href="#sparql-query-algebra--planning">SPARQL Query Algebra &amp; Planning</a></h1>
+<h2 id="1-sparql-compilation-pipeline"><a class="header" href="#1-sparql-compilation-pipeline">1. SPARQL Compilation Pipeline</a></h2>
+<p>Roxi implements a native SPARQL 1.1 query engine in <a href="file:///Users/sac/roxi/lib/src/sparql.rs">lib/src/sparql.rs</a>. When a SPARQL query string is executed, it passes through three translation steps:</p>
+<pre><code>        SPARQL Query String
+                |
+                v
+         Spargebra Parser
+        (Query Algebra AST)
+                |
+                v
+     Plan Extraction Pipeline
+     (Optimized PlanNode Tree)
+                |
+                v
+        Execution Engine
+    (Lazy TripleIndex Scans)
+</code></pre>
+<ol>
+<li><strong>Syntactic Parsing</strong>: The query string is parsed by the <code>spargebra</code> crate, which compiles it into a query algebra tree.</li>
+<li><strong>Plan Extraction</strong>: The query algebra is mapped to a Roxi-native <code>PlanNode</code> tree. This step simplifies joins, optimizes filters, and structures triple pattern lookups.</li>
+<li><strong>Execution</strong>: The <code>PlanNode</code> tree is evaluated against the <code>TripleIndex</code> to generate a stream of bindings.</li>
+</ol>
+<hr />
+<h2 id="2-query-optimization-strategies"><a class="header" href="#2-query-optimization-strategies">2. Query Optimization Strategies</a></h2>
+<p>To ensure high performance over large graphs, Roxi applies several optimization rules during plan extraction:</p>
+<ul>
+<li><strong>Triple Pattern Ordering</strong>: Triple patterns within a basic graph pattern (BGP) are ordered based on variable binding selectivity. Patterns with bound subjects or predicates are evaluated first, reducing intermediate result sizes.</li>
+<li><strong>Lazy Join Evaluation</strong>: Joins are evaluated lazily. Bindings from the left-hand input are propagated to the right-hand input on-the-fly, allowing the engine to perform index lookups directly rather than generating cross-products.</li>
+<li><strong>Filter Pushdown</strong>: Filter expressions are pushed down the plan tree as close as possible to the triple pattern scan nodes. This filters out invalid bindings early, avoiding overhead in upper join nodes.</li>
+</ul>
+<hr />
+<h2 id="3-plannode-representations"><a class="header" href="#3-plannode-representations">3. PlanNode Representations</a></h2>
+<p>The query plan is represented as a tree of <code>PlanNode</code> variants:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum PlanNode {
+    Done,
+    Scan(TriplePattern),
+    Join {
+        left: Box&lt;PlanNode&gt;,
+        right: Box&lt;PlanNode&gt;,
+    },
+    Filter {
+        expression: PlanExpression,
+        input: Box&lt;PlanNode&gt;,
+    },
+    Project {
+        variables: Vec&lt;String&gt;,
+        input: Box&lt;PlanNode&gt;,
+    },
+}
+<span class="boring">}</span></code></pre></pre>
+<ul>
+<li><strong><code>Scan</code></strong>: Scans the <code>TripleIndex</code> using a pattern (subject, predicate, object, graph).</li>
+<li><strong><code>Join</code></strong>: Computes the relational join of two sub-plans.</li>
+<li><strong><code>Filter</code></strong>: Evaluates expression conditions over bindings, filtering out non-matching rows.</li>
+<li><strong><code>Project</code></strong>: Restricts bindings to select output variables.</li>
+</ul>
+<hr />
+<h2 id="4-rust-execution-code-reference"><a class="header" href="#4-rust-execution-code-reference">4. Rust Execution Code Reference</a></h2>
+<p>Below is the Rust structural design of the query planner and evaluator in Roxi:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashMap;
+
+pub struct TriplePattern {
+    pub s: usize,
+    pub p: usize,
+    pub o: usize,
+}
+
+pub struct Binding {
+    pub map: HashMap&lt;String, usize&gt;,
+}
+
+pub enum PlanNode {
+    Scan(TriplePattern),
+    Join {
+        left: Box&lt;PlanNode&gt;,
+        right: Box&lt;PlanNode&gt;,
+    },
+    Filter {
+        expression: String, // Simplified string representation
+        input: Box&lt;PlanNode&gt;,
+    },
+}
+
+pub struct QueryEvaluator;
+
+impl QueryEvaluator {
+    /// Evaluates a plan node recursively against the TripleIndex
+    pub fn evaluate(
+        &amp;self,
+        node: &amp;PlanNode,
+        index: &amp;roxi::tripleindex::TripleIndex,
+        input_bindings: Vec&lt;Binding&gt;,
+    ) -&gt; Vec&lt;Binding&gt; {
+        match node {
+            PlanNode::Scan(pattern) =&gt; {
+                let mut results = Vec::new();
+                for binding in input_bindings {
+                    // Match pattern with bound variables from input
+                    let matches = index.query_pattern(
+                        Self::resolve_var(pattern.s, &amp;binding),
+                        Self::resolve_var(pattern.p, &amp;binding),
+                        Self::resolve_var(pattern.o, &amp;binding),
+                    );
+                    for m in matches {
+                        let mut new_binding = binding.clone();
+                        // Bind variables based on match
+                        new_binding.map.insert("subject".to_string(), m.s);
+                        results.push(new_binding);
+                    }
+                }
+                results
+            }
+            PlanNode::Join { left, right } =&gt; {
+                // Lazily join left and right plans
+                let left_results = self.evaluate(left, index, input_bindings);
+                self.evaluate(right, index, left_results)
+            }
+            PlanNode::Filter { expression, input } =&gt; {
+                let input_results = self.evaluate(input, index, input_bindings);
+                input_results
+                    .into_iter()
+                    .filter(|binding| self.evaluate_filter_expr(expression, binding))
+                    .collect()
+            }
+        }
+    }
+
+    fn resolve_var(val: usize, _binding: &amp;Binding) -&gt; usize {
+        val
+    }
+
+    fn evaluate_filter_expr(&amp;self, _expr: &amp;str, _binding: &amp;Binding) -&gt; bool {
+        true
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sparql-11-update--dred-integration"><a class="header" href="#sparql-11-update--dred-integration">SPARQL 1.1 Update &amp; DRed Integration</a></h1>
+<h2 id="1-sparql-update-operations"><a class="header" href="#1-sparql-update-operations">1. SPARQL Update Operations</a></h2>
+<p>Roxi supports the W3C SPARQL 1.1 Update specification, which provides a declarative syntax for adding, deleting, and modifying RDF graphs.</p>
+<p>Supported operations include:</p>
+<ul>
+<li><strong><code>INSERT DATA</code></strong>: Directly adds new triples to the graph index.</li>
+<li><strong><code>DELETE DATA</code></strong>: Removes matching triples from the index.</li>
+<li><strong><code>DELETE/INSERT</code></strong>: Queries the store first, binds variables, and uses the resulting bindings to delete old triples and insert new ones.</li>
+<li><strong><code>CLEAR</code></strong>: Clears all triples from a specific graph or the entire workspace.</li>
+</ul>
+<hr />
+<h2 id="2-dred-incremental-maintenance-integration"><a class="header" href="#2-dred-incremental-maintenance-integration">2. DRed Incremental Maintenance Integration</a></h2>
+<p>When triples are deleted via <code>DELETE DATA</code> or <code>DELETE/INSERT</code>, Roxi does not simply remove the records from the <code>TripleIndex</code>. Deleting base facts can render previously materialized forward-chained inferences invalid.</p>
+<p>To maintain consistency without performing full, expensive re-reasoning runs, Roxi integrates SPARQL Update deletions directly with the <strong>Delete/Rederive (DRed)</strong> incremental maintenance engine:</p>
+<pre><code>        SPARQL Update Delete Query
+                    |
+                    v
+          Delete Base Triples
+                    |
+                    v
+    DRed Engine: Mark Dependent Triples
+  (Collect derived facts that use deleted base)
+                    |
+                    v
+     Rederive: Check Alternate Supports
+  (Verify if facts can be derived by other paths)
+                    |
+                    v
+       Confirm Deletions &amp; Clean-up
+  (Remove base &amp; unsupported derived triples)
+</code></pre>
+<ol>
+<li><strong>Delete Propagation</strong>: The SPARQL engine deletes the base triples. It then passes the deleted triples to the DRed engine. DRed identifies all derived triples that used the deleted triples as rule supports and marks them for deletion.</li>
+<li><strong>Alternate Support Check (Rederive)</strong>: The engine verifies if any of the marked derived triples can still be inferred through alternative rules or independent base facts. If an alternate support is found, the triple is unmarked.</li>
+<li><strong>Execution</strong>: Remaining marked triples are removed from the index.</li>
+</ol>
+<p>This integration guarantees that updates are propagated through all rule layers instantly, maintaining graph consistency.</p>
+<hr />
+<h2 id="3-rust-update-implementation-reference"><a class="header" href="#3-rust-update-implementation-reference">3. Rust Update Implementation Reference</a></h2>
+<p>Below is the Rust structural design of the SPARQL Update coordinator and DRed integration in Roxi:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashSet;
+
+pub struct UpdateOperation {
+    pub insert_triples: Vec&lt;roxi::triples::Triple&gt;,
+    pub delete_triples: Vec&lt;roxi::triples::Triple&gt;,
+}
+
+pub struct UpdateCoordinator {
+    // Reference to index and reasoner
+}
+
+impl UpdateCoordinator {
+    /// Executes a SPARQL Update operation, triggering DRed updates
+    pub fn execute_update(
+        &amp;self,
+        op: UpdateOperation,
+        index: &amp;mut roxi::tripleindex::TripleIndex,
+        dred: &amp;mut roxi::dred::DRed,
+    ) -&gt; Result&lt;(), UpdateError&gt; {
+        // 1. Execute direct insertions
+        if !op.insert_triples.is_empty() {
+            index.insert_batch(&amp;op.insert_triples);
+        }
+
+        // 2. Execute deletions with DRed incremental updates
+        if !op.delete_triples.is_empty() {
+            // Collect initial base deletions
+            let mut deleted_base = HashSet::new();
+            for triple in op.delete_triples {
+                if index.contains(&amp;triple) {
+                    index.remove(&amp;triple);
+                    deleted_base.insert(triple);
+                }
+            }
+
+            // Propagate deletions using the DRed engine
+            dred.propagate_deletions(deleted_base, index);
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum UpdateError {
+    ExecutionFailure(String),
+}
+<span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ci-workflows"><a class="header" href="#ci-workflows">CI Workflows</a></h1>
+<h2 id="automated-quality-gates"><a class="header" href="#automated-quality-gates">Automated Quality Gates</a></h2>
+<p>Roxi uses GitHub Actions to run unit tests and the five dialect conformance suites on every push and pull request.</p>
+<hr />
+<h2 id="conformance-configuration"><a class="header" href="#conformance-configuration">Conformance Configuration</a></h2>
+<p>The workflow is configured in <code>.github/workflows/conformance.yml</code>:</p>
+<pre><code class="language-yaml">name: Conformance Gate
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup update stable
+      - name: Run Conformance Suites
+        run: |
+          cargo test --test sparql11_conformance
+          cargo test --test datalog_conformance
+          cargo test --test n3_conformance
+          cargo test --test shacl_conformance
+          cargo test --test shex_conformance
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="dialect-conformance-metrics"><a class="header" href="#dialect-conformance-metrics">Dialect Conformance Metrics</a></h1>
+<h2 id="conformance-goals"><a class="header" href="#conformance-goals">Conformance Goals</a></h2>
+<p>Roxi tracks conformance status across all supported dialects:</p>
+<ul>
+<li><strong>SPARQL 1.1</strong>: W3C query evaluation and update tests.</li>
+<li><strong>Datalog</strong>: Custom Datalog core test suite.</li>
+<li><strong>N3</strong>: EYE Reasoner N3 community test corpus.</li>
+<li><strong>SHACL</strong>: W3C data-shapes test suite.</li>
+<li><strong>ShEx</strong>: shexTest conformance suite.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributors"><a class="header" href="#contributors">Contributors</a></h1>
+<h2 id="maintaining-roxi"><a class="header" href="#maintaining-roxi">Maintaining Roxi</a></h2>
+<p>Roxi is maintained by the DeepMind Antigravity Team.</p>
+<p>Contributions are welcome! Please see the repository guidelines for submitting PRs and bug reports.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>

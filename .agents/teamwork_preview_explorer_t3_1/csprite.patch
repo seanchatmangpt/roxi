@@ -1,0 +1,156 @@
+diff --git a/lib/src/csprite.rs b/lib/src/csprite.rs
+index 8677c7f..d57ea8c 100644
+--- a/lib/src/csprite.rs
++++ b/lib/src/csprite.rs
+@@ -163,16 +163,22 @@ impl CSprite {
+     fn eval_backward_csprite(&self, rule_head: &Triple) -> (HashSet<Rc<Rule>>, Vec<Vec<Rc<Rule>>>) {
+-        //TODO check cycles
+         let mut matched_rules = HashSet::new();
+         let mut hierarchies = Vec::new();
+-        self.eval_backward_csprite_helper(rule_head, &mut matched_rules, false, &mut hierarchies);
++        let mut history = HashSet::new();
++        self.eval_backward_csprite_helper(
++            rule_head,
++            &mut matched_rules,
++            false,
++            &mut hierarchies,
++            &mut history,
++        );
+         (matched_rules, hierarchies)
+         //self.eval_backward_csprite_helper_with_stack(rule_head)
+     }
+     fn eval_backward_csprite_helper(
+         &self,
+         rule_head: &Triple,
+         matched_rules: &mut HashSet<Rc<Rule>>,
+         hierarchy: bool,
+         hierarchies: &mut Vec<Vec<Rc<Rule>>>,
++        history: &mut HashSet<Triple>,
+     ) {
+-        //TODO check cycles
++        if !history.insert(rule_head.clone()) {
++            return;
++        }
+         let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> =
+             BackwardChainer::find_subrules(&self.rules_index, rule_head);
+         let mut current_hierarchy = false;
+         for (sub_rule, var_subs) in sub_rules.into_iter() {
+             if matched_rules.insert(sub_rule.clone()) {
+                 if sub_rule.body.len() == 1 {
+                     //hierarchy candidate
+                     if hierarchy {
+                         if let Some(current_hierarchy) = hierarchies.last_mut() {
+                             current_hierarchy.push(sub_rule.clone());
+                         }
+                     } else {
+                         hierarchies.push(Vec::from([sub_rule.clone()]));
+                     }
+                     current_hierarchy = true;
+                 }
+                 for rule_atom in &sub_rule.body {
+                     //recursive call
+                     self.eval_backward_csprite_helper(
+                         rule_atom,
+                         matched_rules,
+                         current_hierarchy,
+                         hierarchies,
++                        history,
+                     );
+                 }
+             }
+         }
++        history.remove(rule_head);
+     }
+     fn eval_backward_csprite_helper_with_stack(
+         &self,
+         rule_head: &Triple,
+     ) -> (HashSet<Rc<Rule>>, Vec<Vec<Rc<Rule>>>) {
+-        //TODO check cycles
+-        let mut stack = Vec::from([rule_head.clone()]); //TODO add initial size & pointers instead of triples
+-        let mut matched_rules = HashSet::new();
+-        let mut hierarchies: Vec<Vec<Rc<Rule>>> = Vec::new();
+-        let mut hierarchy = false;
+-        while !stack.is_empty() {
+-            let current_head = stack.pop().unwrap();
+-            let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> =
+-                BackwardChainer::find_subrules(&self.rules_index, &current_head);
+-            let mut current_hierarchy = false;
+-            for (sub_rule, var_subs) in sub_rules.into_iter() {
+-                if matched_rules.insert(sub_rule.clone()) {
+-                    if sub_rule.body.len() == 1 {
+-                        //hierarchy candidate
+-                        if hierarchy {
+-                            if let Some(current_hierarchy) = hierarchies.last_mut() {
+-                                current_hierarchy.push(sub_rule.clone());
+-                            }
+-                        } else {
+-                            hierarchies.push(Vec::from([sub_rule.clone()]));
+-                        }
+-                        current_hierarchy = true;
+-                    }
+-                    for rule_atom in &sub_rule.body {
+-                        //recursive call
+-                        //self.eval_backward_csprite_helper(rule_atom,matched_rules,current_hierarchy, hierarchies);
+-                        stack.push(rule_atom.clone());
+-                        hierarchy = current_hierarchy;
+-                    }
+-                }
+-            }
+-        }
+-        (matched_rules, hierarchies)
++        enum StackFrame {
++            Enter { rule_head: Triple, hierarchy: bool },
++            Exit { rule_head: Triple },
++        }
++        let mut stack = vec![StackFrame::Enter {
++            rule_head: rule_head.clone(),
++            hierarchy: false,
++        }];
++        let mut matched_rules = HashSet::new();
++        let mut hierarchies: Vec<Vec<Rc<Rule>>> = Vec::new();
++        let mut history = HashSet::new();
++        while let Some(frame) = stack.pop() {
++            match frame {
++                StackFrame::Exit { rule_head } => {
++                    history.remove(&rule_head);
++                }
++                StackFrame::Enter { rule_head, hierarchy } => {
++                    if !history.insert(rule_head.clone()) {
++                        continue;
++                    }
++                    stack.push(StackFrame::Exit {
++                        rule_head: rule_head.clone(),
++                    });
++                    let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> =
++                        BackwardChainer::find_subrules(&self.rules_index, &rule_head);
++                    for (sub_rule, _var_subs) in sub_rules.into_iter() {
++                        if matched_rules.insert(sub_rule.clone()) {
++                            let mut current_hierarchy = false;
++                            if sub_rule.body.len() == 1 {
++                                //hierarchy candidate
++                                if hierarchy {
++                                    if let Some(h) = hierarchies.last_mut() {
++                                        h.push(sub_rule.clone());
++                                    }
++                                } else {
++                                    hierarchies.push(Vec::from([sub_rule.clone()]));
++                                }
++                                current_hierarchy = true;
++                            }
++                            for rule_atom in sub_rule.body.iter().rev() {
++                                stack.push(StackFrame::Enter {
++                                    rule_head: rule_atom.clone(),
++                                    hierarchy: current_hierarchy,
++                                });
++                            }
++                        }
++                    }
++                }
++            }
++        }
++        (matched_rules, hierarchies)
+     }
+@@ -374,3 +380,3 @@ mod tests {
+-        let is_implemented = false;
++        let is_implemented = true;
+         if !is_implemented {

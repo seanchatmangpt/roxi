@@ -1,54 +1,130 @@
-use std::rc::Rc;
-use crate::{Binding, Rule, RuleIndex, Triple, TripleIndex, VarOrTerm, Encoder,TripleStore};
-#[cfg(not(test))]
-use log::{info, warn,trace, debug}; // Use log crate when building application
+use crate::{Binding, Encoder, Rule, RuleIndex, Triple, TripleIndex, TripleStore, VarOrTerm};
+use log::{debug, info, trace, warn};
+use std::rc::Rc; // Use log crate when building application
 
-#[cfg(test)]
-use std::{println as info, println as warn, println as trace, println as debug};
+
 
 pub struct BackwardChainer;
 
 impl BackwardChainer {
-    pub fn eval_backward(triple_index: &TripleIndex, rule_index: &RuleIndex, rule_head: &Triple) -> Binding {
-        let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> = Self::find_subrules(rule_index, rule_head);
+    pub fn eval_backward(
+        triple_index: &TripleIndex,
+        rule_index: &RuleIndex,
+        rule_head: &Triple,
+    ) -> Binding {
+        let mut history = std::collections::HashSet::new();
+        Self::eval_backward_inner(triple_index, rule_index, rule_head, &mut history)
+    }
+
+    fn eval_backward_inner(
+        triple_index: &TripleIndex,
+        rule_index: &RuleIndex,
+        rule_head: &Triple,
+        history: &mut std::collections::HashSet<Triple>,
+    ) -> Binding {
+        if !history.insert(rule_head.clone()) {
+            return Binding::new();
+        }
+        let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> =
+            Self::find_subrules(rule_index, rule_head);
         let mut all_bindings = Binding::new();
         for (sub_rule, var_subs) in sub_rules.into_iter() {
-            debug!("Backchainging rule: {:?}",TripleStore::decode_rule(&sub_rule));
+            debug!(
+                "Backchaining rule: {:?}",
+                TripleStore::decode_rule(&sub_rule)
+            );
+            // Initialize rule_bindings as "empty" — join identity.
+            // For each body literal, we:
+            //   1. Collect bindings from direct EDB lookup (triple_index.query)
+            //   2. Collect bindings from recursive IDB derivation (eval_backward_inner)
+            //   3. Union both via combine (bag union of result rows)
+            //   4. Join the per-literal bindings into the running rule_bindings
+            //      (natural join on shared variables across body literals)
             let mut rule_bindings = Binding::new();
-            for rule_atom in &sub_rule.body {
-                debug!("Matching body: {:?}",TripleStore::decode_triple(rule_atom));
+            let mut rule_failed = false;
+            for body_lit in &sub_rule.body {
+                let rule_atom = &body_lit.pattern;
+                debug!("Matching body: {:?}", TripleStore::decode_triple(rule_atom));
 
+                // Collect bindings for this literal from both sources.
+                let mut lit_bindings = Binding::new();
+
+                // Direct EDB lookup.
                 if let Some(result_bindings) = triple_index.query(rule_atom, None) {
-                    debug!("   Found matching body: {:?}",TripleStore::decode_bindings(&result_bindings));
-
-                    rule_bindings = rule_bindings.join(&result_bindings);
-
+                    debug!(
+                        "   Found matching body (direct): {:?}",
+                        TripleStore::decode_bindings(&result_bindings)
+                    );
+                    lit_bindings.combine(result_bindings);
                 }
-                //recursive call
-                let recursive_bindings = Self::eval_backward(triple_index, rule_index, rule_atom);
-                rule_bindings.combine(recursive_bindings);
+
+                // Recursive IDB derivation (skip for negated literals).
+                if !body_lit.negated {
+                    let recursive_bindings =
+                        Self::eval_backward_inner(triple_index, rule_index, rule_atom, history);
+                    if recursive_bindings.len() > 0 {
+                        lit_bindings.combine(recursive_bindings);
+                    }
+                }
+
+                // Join per-literal bindings with the running result.
+                rule_bindings = rule_bindings.join(&lit_bindings);
+
+                // Short-circuit: if neither direct nor recursive found anything,
+                // this rule body cannot be satisfied.
+                if lit_bindings.len() == 0 {
+                    rule_failed = true;
+                    break;
+                }
             }
-            //rename variables
+            if rule_failed {
+                continue;
+            }
+            // Rename rule-internal variables to query variables via var_subs.
             let renamed = rule_bindings.rename(var_subs);
             all_bindings.combine(renamed);
         }
+        history.remove(rule_head);
         all_bindings
     }
-    //todo create index on rule heads
-    pub fn find_subrules(rules_index: &RuleIndex, rule_head: &Triple) -> Vec<(Rc<Rule>, Vec<(usize, usize)>)> {
+
+    /// Find all rules whose head unifies with `rule_head`.
+    /// Returns the matching rules paired with variable substitution pairs
+    /// `(rule_var, query_var)` for renaming after evaluation.
+    pub fn find_subrules(
+        rules_index: &RuleIndex,
+        rule_head: &Triple,
+    ) -> Vec<(Rc<Rule>, Vec<(usize, usize)>)> {
+        let candidates: &[Rc<Rule>] = if rule_head.p.is_term() {
+            // Fast path: look up only rules whose head predicate matches
+            rules_index
+                .head_by_pred
+                .get(&rule_head.p.to_encoded())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[])
+        } else {
+            // Variable predicate: must check all rules
+            rules_index.rules.as_slice()
+        };
         let mut rule_matches = Vec::new();
-        for rule in rules_index.rules.iter() {
+        for rule in candidates.iter() {
             let head: &Triple = &rule.head;
-            let mut var_names_subs: Vec::<(usize, usize)> = Vec::new();
-            if Self::eval_triple_element(&head.s, &rule_head.s, &mut var_names_subs) &&
-                Self::eval_triple_element(&head.p, &rule_head.p, &mut var_names_subs) &&
-                Self::eval_triple_element(&head.o, &rule_head.o, &mut var_names_subs) {
+            let mut var_names_subs: Vec<(usize, usize)> = Vec::new();
+            if Self::eval_triple_element(&head.s, &rule_head.s, &mut var_names_subs)
+                && Self::eval_triple_element(&head.p, &rule_head.p, &mut var_names_subs)
+                && Self::eval_triple_element(&head.o, &rule_head.o, &mut var_names_subs)
+            {
                 rule_matches.push((rule.clone(), var_names_subs));
             }
         }
         rule_matches
     }
-    fn eval_triple_element(left: &VarOrTerm, right: &VarOrTerm, var_names_sub: &mut Vec<(usize, usize)>) -> bool {
+
+    fn eval_triple_element(
+        left: &VarOrTerm,
+        right: &VarOrTerm,
+        var_names_sub: &mut Vec<(usize, usize)>,
+    ) -> bool {
         if let (VarOrTerm::Var(left_name), VarOrTerm::Var(right_name)) = (left, right) {
             var_names_sub.push((left_name.name, right_name.name));
             true
@@ -59,65 +135,5 @@ impl BackwardChainer {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use crate::{BackwardChainer, Encoder, Syntax, Triple, TripleStore, VarOrTerm};
-
-    #[test]
-    fn test(){
-        let triples = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix : <http://www.some.com/>.
-:sensor1 rdf:type :Sensor.
-:sensor1 :observes :temp.
-:temp rdf:type :Temp.
-:obs rdf:type :Observation.
-:obs :madeBySensor :sensor1.
-:obs :observedProperty :temp.
-";
-
-        let rules ="@prefix : <http://www.some.com/>.
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-{?x rdf:type :Observation. ?x :madeBySensor ?y. ?y rdf:type :TempSensor}=>{?x rdf:type :TempObservation.}
-{?x rdf:type :Sensor. ?x :observes ?y. ?y rdf:type :Temp}=>{?x rdf:type :TempSensor.}.
-{?x rdf:type :TempObservation} => {?x rdf:type :EnvironmentObservation.}.
-";
-
-        let mut store = TripleStore::new();
-        store.load_triples(triples, Syntax::Turtle);
-        store.load_rules(rules);
-
-        //backward head
-        let backward_head = Triple::from("?x".to_string(),"<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>".to_string(),"<http://www.some.com/EnvironmentObservation>".to_string());
-        let var_encoded= Encoder::add("x".to_string());
-        let result_encoded = Encoder::add("<http://www.some.com/obs>".to_string());
-
-        let  bindings = BackwardChainer::eval_backward(&store.triple_index, &store.rules_index, &backward_head);
-        let result_bindings = HashMap::from([
-            (var_encoded, Vec::from([result_encoded]))
-        ]);
-
-        assert_eq!(1,bindings.len());
-        assert_eq!(result_bindings.get(&var_encoded), bindings.get(&var_encoded));
-    }
-    #[test]
-    fn test_eval_backward_rule(){
-        let data="<http://example2.com/a> a test:SubClass.\n\
-                <http://example2.com/a> test:hasRef <http://example2.com/b>.\n\
-                <http://example2.com/b> test:hasRef <http://example2.com/c>.\n\
-                <http://example2.com/c> a test:SubClass.\n\
-            {?s a test:SubClass.}=>{?s a test:SubClass2.}\n
-            {?s a test:SubClass2.?s test:hasRef ?b.?b test:hasRef ?c.?c a test:SubClass2.}=>{?s a test:SuperType.}";
-        let mut store = TripleStore::from(data);
-        let backward_head = Triple{s:VarOrTerm::new_var("?newVar".to_string()),p:VarOrTerm::new_term("a".to_string()),o:VarOrTerm::new_term("test:SuperType".to_string()), g: None};
-        let var_encoded= Encoder::add("?newVar".to_string());
-        let result_encoded = Encoder::add("<http://example2.com/a>".to_string());
-
-        let  bindings = BackwardChainer::eval_backward(&store.triple_index, &store.rules_index, &backward_head);
-        let result_bindings = HashMap::from([
-            (var_encoded, Vec::from([result_encoded]))
-        ]);
-        assert_eq!(result_bindings.get(&12), bindings.get(&12));
-    }
-}
-
+#[path = "backwardchaining_test.rs"]
+mod backwardchaining_test;

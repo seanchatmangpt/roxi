@@ -1,0 +1,368 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Cycle Safety &amp; Visited Guards - Roxi RDF Engine — Developer Guide &amp; Reference</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Roxi RDF Engine — Developer Guide &amp; Reference</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cycle-safety--visited-guards-in-roxi"><a class="header" href="#cycle-safety--visited-guards-in-roxi">Cycle Safety &amp; Visited Guards in Roxi</a></h1>
+<h2 id="1-the-recursion-problem-in-backward-chainers"><a class="header" href="#1-the-recursion-problem-in-backward-chainers">1. The Recursion Problem in Backward Chainers</a></h2>
+<p>Backward-chaining reasoning engines compute facts on-demand by starting with a query goal and recursively evaluating rules whose heads match that goal. While this approach avoids the upfront memory costs of forward materialization, it faces a fundamental challenge: <strong>infinite recursion</strong>.</p>
+<p>In semantic graphs, recursive relationships are common (e.g., family trees, networks, class hierarchies). Consider a simple transitive rule:
+$$\text{connectedTo}(?X, ?Y) \leftarrow \text{linkedTo}(?X, ?Z), \text{connectedTo}(?Z, ?Y)$$</p>
+<p>If the input graph contains a circular relationship (for example, $:A \xrightarrow{\text{linkedTo}} :B$ and $:B \xrightarrow{\text{linkedTo}} :A$), evaluating the goal query <code>?x :connectedTo :C</code> leads to the following execution sequence:</p>
+<ol>
+<li>Match rule head: <code>?x :connectedTo :C</code> $\to$ resolve body subgoal <code>?z :connectedTo :C</code>.</li>
+<li>First bind <code>?z</code> to <code>:B</code> (using <code>:A :linkedTo :B</code>). Resolve subgoal <code>:B :connectedTo :C</code>.</li>
+<li>Match rule head for <code>:B :connectedTo :C</code> $\to$ resolve body subgoal <code>?z2 :connectedTo :C</code>.</li>
+<li>Bind <code>?z2</code> to <code>:A</code> (using <code>:B :linkedTo :A</code>). Resolve subgoal <code>:A :connectedTo :C</code>.</li>
+<li>The goal <code>:A :connectedTo :C</code> is identical to the step 1 goal, creating an infinite loop.</li>
+</ol>
+<p>Without termination guards, this recursive loop causes a stack overflow (SIGSEGV) or hangs the process indefinitely.</p>
+<hr />
+<h2 id="2-visited-set-history-guard-implementation"><a class="header" href="#2-visited-set-history-guard-implementation">2. Visited-Set History Guard Implementation</a></h2>
+<p>To guarantee termination and ensure stack safety, Roxi implements a <strong>Visited-Set History Guard</strong> in <a href="file:///Users/sac/roxi/lib/src/backwardchaining.rs">lib/src/backwardchaining.rs</a>.</p>
+<p>During backward resolution, the engine threads a mutable <code>history</code> context containing all subgoals currently active in the execution stack.</p>
+<pre><code>       [Goal: ?x :connectedTo :C]
+                  |
+                  | (history: {})
+                  v
+       [Goal: :B :connectedTo :C]
+                  |
+                  | (history: {?x :connectedTo :C})
+                  v
+       [Goal: :A :connectedTo :C]
+                  |
+                  | (history: {?x :connectedTo :C, :B :connectedTo :C})
+                  v
+       Check History: Goal matches '?x :connectedTo :C' (Bound to :A)
+                  |
+                  +---&gt; DETECTED CYCLE! Abort recursion &amp; return empty bindings
+</code></pre>
+<hr />
+<h2 id="3-step-by-step-traversal-protocol"><a class="header" href="#3-step-by-step-traversal-protocol">3. Step-by-Step Traversal Protocol</a></h2>
+<ol>
+<li><strong>Subgoal Interception</strong>: When a subgoal <code>G</code> is scheduled for evaluation, the engine verifies if <code>G</code> matches any goal already present in <code>history</code> (accounting for variable binding states).</li>
+<li><strong>Short-Circuit</strong>: If <code>G</code> is detected in <code>history</code>, the engine terminates the branch immediately and returns an empty set of bindings, preventing infinite loops.</li>
+<li><strong>Push Step</strong>: If <code>G</code> is not present, it is added to the <code>history</code> set, and evaluation proceeds recursively.</li>
+<li><strong>Pop (Backtrack) Step</strong>: When the recursive evaluation of <code>G</code> completes and the engine backtracks to explore alternative rule paths, <code>G</code> is removed from the <code>history</code> set. This ensures that independent execution branches are not blocked.</li>
+</ol>
+<hr />
+<h2 id="4-rust-implementation-reference"><a class="header" href="#4-rust-implementation-reference">4. Rust Implementation Reference</a></h2>
+<p>Below is the Rust implementation of the cycle guard:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashSet;
+use std::rc::Rc;
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Triple {
+    pub s: usize,
+    pub p: usize,
+    pub o: usize,
+}
+
+pub struct Bindings {
+    pub rows: Vec&lt;Vec&lt;usize&gt;&gt;,
+}
+
+pub struct BackwardChainer {
+    // Rule index and store references
+}
+
+impl BackwardChainer {
+    /// Public entry point for goal resolution
+    pub fn resolve_query(&amp;self, goal: &amp;Triple) -&gt; Bindings {
+        let mut history = HashSet::new();
+        self.resolve_goal_inner(goal, &amp;mut history)
+    }
+
+    /// Internal recursive evaluation carrying the visited history set
+    fn resolve_goal_inner(&amp;self, goal: &amp;Triple, history: &amp;mut HashSet&lt;Triple&gt;) -&gt; Bindings {
+        // 1. Cycle Check
+        if history.contains(goal) {
+            // Cycle detected: short-circuit recursion and return empty bindings
+            return Bindings { rows: Vec::new() };
+        }
+
+        // 2. Register current goal in history
+        history.insert(goal.clone());
+
+        let mut results = Bindings { rows: Vec::new() };
+
+        // 3. Evaluate matching rules
+        let matching_rules = self.find_matching_rules(goal);
+        for rule in matching_rules {
+            let subgoal_results = self.resolve_rule_body(&amp;rule, history);
+            results.extend(subgoal_results);
+        }
+
+        // 4. Remove goal from history during backtrack step
+        history.remove(goal);
+
+        results
+    }
+
+    fn find_matching_rules(&amp;self, _goal: &amp;Triple) -&gt; Vec&lt;Rc&lt;Rule&gt;&gt; {
+        // Mock implementation for reference
+        Vec::new()
+    }
+
+    fn resolve_rule_body(&amp;self, _rule: &amp;Rule, _history: &amp;mut HashSet&lt;Triple&gt;) -&gt; Bindings {
+        // Mock implementation for reference
+        Bindings { rows: Vec::new() }
+    }
+}
+
+pub struct Rule {
+    pub body: Vec&lt;Triple&gt;,
+    pub head: Triple,
+}
+<span class="boring">}</span></code></pre></pre>
+<hr />
+<h2 id="5-thread-sandboxed-timeout-guards-in-ci"><a class="header" href="#5-thread-sandboxed-timeout-guards-in-ci">5. Thread-Sandboxed Timeout Guards in CI</a></h2>
+<p>In the test runner <a href="file:///Users/sac/roxi/lib/tests/backwardchaining_cycles.rs">lib/tests/backwardchaining_cycles.rs</a>, cycle guards are validated using a thread-sandboxed safety mechanism. If an implementation error introduces an infinite recursion loop, the test thread is aborted after a 500ms timeout instead of hanging the entire CI pipeline:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[test]
+fn test_cyclic_rules_terminate() {
+    let (tx, rx) = std::sync::mpsc::channel();
+    
+    // Spawn evaluation in a sandboxed thread
+    std::thread::spawn(move || {
+        let store = setup_cyclic_store();
+        let result = store.query_backward(":A", ":connectedTo", "?y");
+        let _ = tx.send(result);
+    });
+
+    // Enforce a strict 500ms timeout
+    let test_timeout = std::time::Duration::from_millis(500);
+    match rx.recv_timeout(test_timeout) {
+        Ok(_) =&gt; {} // Test passed: evaluation terminated in bounded time
+        Err(_) =&gt; panic!("Timeout: Cycle guard failed to terminate recursive loop!"),
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/backward-chaining.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/csprite.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/backward-chaining.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/csprite.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

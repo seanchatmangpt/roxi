@@ -1,0 +1,139 @@
+{
+  "provenance": {
+    "source": "https://github.com/eyereasoner/eye",
+    "description": "Vendored community-standard Notation3 (N3) and EYE reasoner conformance test cases.",
+    "last_synced": "2026-07-04"
+  },
+  "conformance_suites": [
+    {
+      "suite_name": "N3 Parser Syntax and Structures",
+      "test_cases": [
+        {
+          "id": "syntax_multi_triple_head",
+          "name": "Multi-triple head rules",
+          "features": ["multi-triple-heads"],
+          "input": "syntax/multi_head.n3",
+          "expected": "syntax/multi_head_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "syntax_literals",
+          "name": "N3 Literals (strings, numbers, datatypes, langtags)",
+          "features": ["literals"],
+          "input": "syntax/literals.n3",
+          "expected": "syntax/literals_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "syntax_blank_nodes",
+          "name": "Blank nodes and nested blank node structures",
+          "features": ["blank-nodes"],
+          "input": "syntax/blank_nodes.n3",
+          "expected": "syntax/blank_nodes_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "syntax_lists",
+          "name": "RDF lists parsing",
+          "features": ["lists"],
+          "input": "syntax/lists.n3",
+          "expected": "syntax/lists_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "syntax_quantifiers",
+          "name": "@forAll and @forSome quantifiers",
+          "features": ["quantifiers"],
+          "input": "syntax/quantifiers.n3",
+          "expected": "syntax/quantifiers_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "syntax_quoted_graphs",
+          "name": "Quoted graphs as terms",
+          "features": ["quoted-graphs"],
+          "input": "syntax/quoted_graphs.n3",
+          "expected": "syntax/quoted_graphs_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "syntax_backward_implication",
+          "name": "Backward implication <= syntax sugar",
+          "features": ["backward-implication"],
+          "input": "syntax/backward_implication.n3",
+          "expected": "syntax/backward_implication_result.n3",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "suite_name": "N3 Core Built-ins",
+      "test_cases": [
+        {
+          "id": "builtin_log_equalTo",
+          "name": "log:equalTo comparison",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_equal_to.n3",
+          "expected": "builtins/log_equal_to_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_log_implies",
+          "name": "log:implies dynamic rule inference",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_implies.n3",
+          "expected": "builtins/log_implies_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_math_sum",
+          "name": "math:sum addition operator",
+          "features": ["builtins", "math"],
+          "input": "builtins/math_sum.n3",
+          "expected": "builtins/math_sum_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_math_greaterThan",
+          "name": "math:greaterThan comparison operator",
+          "features": ["builtins", "math"],
+          "input": "builtins/math_greater_than.n3",
+          "expected": "builtins/math_greater_than_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_list_in",
+          "name": "list:in membership check",
+          "features": ["builtins", "list"],
+          "input": "builtins/list_in.n3",
+          "expected": "builtins/list_in_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_list_length",
+          "name": "list:length size check",
+          "features": ["builtins", "list"],
+          "input": "builtins/list_length.n3",
+          "expected": "builtins/list_length_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_string_concat",
+          "name": "string:concat string joining",
+          "features": ["builtins", "string"],
+          "input": "builtins/string_concat.n3",
+          "expected": "builtins/string_concat_result.n3",
+          "status": "planned"
+        },
+        {
+          "id": "builtin_string_length",
+          "name": "string:length size check",
+          "features": ["builtins", "string"],
+          "input": "builtins/string_length.n3",
+          "expected": "builtins/string_length_result.n3",
+          "status": "planned"
+        }
+      ]
+    }
+  ]
+}

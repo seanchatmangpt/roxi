@@ -1,0 +1,3 @@
+@prefix : <http://example.org/> .
+{:Alice :name "Alice"} => {:Alice :hasName true} .
+:Alice :name "Alice" .

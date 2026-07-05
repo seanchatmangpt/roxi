@@ -1,0 +1,2 @@
+## 2026-07-04T20:26:47Z
+Examine the correctness, completeness, robustness, and interface conformance of the ShEx validation implementation in `lib/src/shex.rs`, `lib/Cargo.toml`, and `lib/src/lib.rs`. Verify the integration tests in `lib/tests/shex_validation.rs` and the conformance test runner in `lib/tests/shex_conformance/main.rs`. Make sure there are no clippy warnings or compiler errors. Run the tests to confirm they pass cleanly. Deliver a structured review report detailing your findings.

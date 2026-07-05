@@ -1,0 +1,81 @@
+diff --git a/lib/src/backwardchaining.rs b/lib/src/backwardchaining.rs
+index e074092..a512ba7 100644
+--- a/lib/src/backwardchaining.rs
++++ b/lib/src/backwardchaining.rs
+@@ -10,6 +10,43 @@
+ 
+ impl BackwardChainer {
+     pub fn eval_backward(triple_index: &TripleIndex, rule_index: &RuleIndex, rule_head: &Triple) -> Binding {
++        let mut history = std::collections::HashSet::new();
++        Self::eval_backward_inner(triple_index, rule_index, rule_head, &mut history)
++    }
++
++    fn eval_backward_inner(
++        triple_index: &TripleIndex,
++        rule_index: &RuleIndex,
++        rule_head: &Triple,
++        history: &mut std::collections::HashSet<Triple>,
++    ) -> Binding {
++        if !history.insert(rule_head.clone()) {
++            return Binding::new();
++        }
++        let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> = Self::find_subrules(rule_index, rule_head);
++        let mut all_bindings = Binding::new();
++        for (sub_rule, var_subs) in sub_rules.into_iter() {
++            debug!("Backchainging rule: {:?}", TripleStore::decode_rule(&sub_rule));
++            let mut rule_bindings = Binding::new();
++            for rule_atom in &sub_rule.body {
++                debug!("Matching body: {:?}", TripleStore::decode_triple(rule_atom));
++
++                if let Some(result_bindings) = triple_index.query(rule_atom, None) {
++                    debug!("   Found matching body: {:?}", TripleStore::decode_bindings(&result_bindings));
++
++                    rule_bindings = rule_bindings.join(&result_bindings);
++                }
++                //recursive call
++                let recursive_bindings = Self::eval_backward_inner(triple_index, rule_index, rule_atom, history);
++                rule_bindings.combine(recursive_bindings);
++            }
++            //rename variables
++            let renamed = rule_bindings.rename(var_subs);
++            all_bindings.combine(renamed);
++        }
++        history.remove(rule_head);
++        all_bindings
++    }
+-        let sub_rules: Vec<(Rc<Rule>, Vec<(usize, usize)>)> = Self::find_subrules(rule_index, rule_head);
+-        let mut all_bindings = Binding::new();
+-        for (sub_rule, var_subs) in sub_rules.into_iter() {
+-            debug!("Backchainging rule: {:?}",TripleStore::decode_rule(&sub_rule));
+-            let mut rule_bindings = Binding::new();
+-            for rule_atom in &sub_rule.body {
+-                debug!("Matching body: {:?}",TripleStore::decode_triple(rule_atom));
+-
+-                if let Some(result_bindings) = triple_index.query(rule_atom, None) {
+-                    debug!("   Found matching body: {:?}",TripleStore::decode_bindings(&result_bindings));
+-
+-                    rule_bindings = rule_bindings.join(&result_bindings);
+-
+-                }
+-                //recursive call
+-                let recursive_bindings = Self::eval_backward(triple_index, rule_index, rule_atom);
+-                rule_bindings.combine(recursive_bindings);
+-            }
+-            //rename variables
+-            let renamed = rule_bindings.rename(var_subs);
+-            all_bindings.combine(renamed);
+-        }
+-        all_bindings
+-    }
+ 
+     //todo create index on rule heads
+     pub fn find_subrules(rules_index: &RuleIndex, rule_head: &Triple) -> Vec<(Rc<Rule>, Vec<(usize, usize)>)> {
+@@ -132,7 +169,7 @@
+ 
+         // Placeholder that fails the test until TICKET-002 is implemented.
+         // Once implemented, set is_implemented to true to run the actual test.
+-        let is_implemented = false;
++        let is_implemented = true;
+         if !is_implemented {
+             panic!("TICKET-002: Production Cycle Guard in Backward Chainer is not yet implemented. Set is_implemented to true once implemented.");
+         }

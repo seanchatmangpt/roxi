@@ -1,0 +1,42 @@
+name: Cross-Dialect Conformance Gate
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    name: Conformance Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Run SPARQL 1.1 Conformance Tests
+        run: cargo test --workspace --test sparql11_conformance
+
+      - name: Run SHACL Conformance Tests
+        run: cargo test --workspace --test shacl_conformance
+
+      - name: Run ShEx Conformance Tests
+        run: cargo test --workspace --test shex_conformance
+
+      - name: Run N3 Conformance Tests
+        run: cargo test --workspace --test n3_conformance
+
+      - name: Run Datalog Conformance Tests
+        run: cargo test --workspace --test datalog_conformance
+
+      - name: Upload Conformance Manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-manifests
+          path: docs/jira/26.7.4/manifests/

@@ -1,0 +1,389 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Procedural Built-ins - Roxi RDF Engine — Developer Guide &amp; Reference</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Roxi RDF Engine — Developer Guide &amp; Reference</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="n3-procedural-built-ins-reference"><a class="header" href="#n3-procedural-built-ins-reference">N3 Procedural Built-ins Reference</a></h1>
+<h2 id="1-runtime-interception-mechanics"><a class="header" href="#1-runtime-interception-mechanics">1. Runtime Interception Mechanics</a></h2>
+<p>In standard RDF semantics, a triple like <code>?x math:sum (?y ?z)</code> is matched as a literal pattern search against the triple store. However, in Notation3 (N3), the <code>math:sum</code> predicate is a <strong>built-in</strong>. When the reasoner encounters a built-in predicate, it intercepts execution and executes procedural Rust code in the query loop instead of searching the database indexes.</p>
+<pre><code>                  Rule Body Matcher
+                          |
+            Check Predicate Namespace/IRI
+               /                     \\
+      [Standard IRI]             [Built-in IRI]
+            /                           \\
+           v                             v
+   Scan TripleIndex              Execute Rust Function
+   (Index Lookup)             (e.g., math_sum, string_concat)
+                                         |
+                                         v
+                                Bind Output Variable
+</code></pre>
+<hr />
+<h2 id="2-complete-built-ins-directory"><a class="header" href="#2-complete-built-ins-directory">2. Complete Built-ins Directory</a></h2>
+<h3 id="21-the-log-logical-namespace"><a class="header" href="#21-the-log-logical-namespace">2.1. The <code>log:</code> Logical Namespace</a></h3>
+<p>The <code>log:</code> namespace provides operations for formula checking, term equality, and database queries.</p>
+<h4 id="logequalto"><a class="header" href="#logequalto"><code>log:equalTo</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?termA log:equalTo ?termB</code></li>
+<li><strong>Input</strong>: Both terms must be bound.</li>
+<li><strong>Behavior</strong>: Evaluates to true if the interned ID of <code>?termA</code> is identical to <code>?termB</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?x :id ?id . ?id log:equalTo "admin" } =&gt; { ?x :role :sysAdmin } .
+</code></pre>
+</li>
+</ul>
+<h4 id="logimplies"><a class="header" href="#logimplies"><code>log:implies</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>{body} log:implies {head}</code></li>
+<li><strong>Behavior</strong>: Equivalent to <code>=&gt;</code>. Denotes forward logical implication.</li>
+</ul>
+<hr />
+<h3 id="22-the-math-mathematical-namespace"><a class="header" href="#22-the-math-mathematical-namespace">2.2. The <code>math:</code> Mathematical Namespace</a></h3>
+<p>The <code>math:</code> namespace handles basic arithmetic and numeric comparison operations.</p>
+<h4 id="mathsum"><a class="header" href="#mathsum"><code>math:sum</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?list math:sum ?result</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list of numeric terms. <code>?result</code> can be bound or unbound.</li>
+<li><strong>Behavior</strong>: Sums the values of the list elements. If <code>?result</code> is unbound, binds it to the sum; if bound, verifies matching equality.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ (?val1 ?val2) math:sum ?out } =&gt; { :total :value ?out } .
+</code></pre>
+</li>
+</ul>
+<h4 id="mathgreaterthan"><a class="header" href="#mathgreaterthan"><code>math:greaterThan</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?valA math:greaterThan ?valB</code></li>
+<li><strong>Input</strong>: Both values must be bound to numeric terms.</li>
+<li><strong>Behavior</strong>: Succeeds if <code>?valA</code> is strictly greater than <code>?valB</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?emp :salary ?sal . ?sal math:greaterThan 120000 } =&gt; { ?emp :bracket :top } .
+</code></pre>
+</li>
+</ul>
+<hr />
+<h3 id="23-the-list-list-processing-namespace"><a class="header" href="#23-the-list-list-processing-namespace">2.3. The <code>list:</code> List-Processing Namespace</a></h3>
+<p>The <code>list:</code> namespace contains operations for manipulating and querying ordered lists.</p>
+<h4 id="listin"><a class="header" href="#listin"><code>list:in</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?member list:in ?list</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list.</li>
+<li><strong>Behavior</strong>: Iterates over elements of <code>?list</code>. If <code>?member</code> is unbound, binds it to each element sequentially (backtracking); if bound, verifies membership.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?color list:in (:red :green :blue) } =&gt; { ?color :status :primary } .
+</code></pre>
+</li>
+</ul>
+<h4 id="listlength"><a class="header" href="#listlength"><code>list:length</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?list list:length ?len</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list.</li>
+<li><strong>Behavior</strong>: Counts elements in <code>?list</code> and binds or verifies the integer result in <code>?len</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?user :hobbies ?list . ?list list:length ?len } =&gt; { ?user :hobbyCount ?len } .
+</code></pre>
+</li>
+</ul>
+<hr />
+<h3 id="24-the-string-string-manipulation-namespace"><a class="header" href="#24-the-string-string-manipulation-namespace">2.4. The <code>string:</code> String Manipulation Namespace</a></h3>
+<p>The <code>string:</code> namespace contains string parsing and formatting operations.</p>
+<h4 id="stringconcat"><a class="header" href="#stringconcat"><code>string:concat</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?list string:concat ?result</code></li>
+<li><strong>Input</strong>: <code>?list</code> must be bound to an RDF list of string literals.</li>
+<li><strong>Behavior</strong>: Concatenates the string representations of list elements and binds or verifies the result string in <code>?result</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ (?first " " ?last) string:concat ?fullName } =&gt; { ?user :name ?fullName } .
+</code></pre>
+</li>
+</ul>
+<h4 id="stringlength"><a class="header" href="#stringlength"><code>string:length</code></a></h4>
+<ul>
+<li><strong>Syntax</strong>: <code>?str string:length ?len</code></li>
+<li><strong>Input</strong>: <code>?str</code> must be bound to a string literal.</li>
+<li><strong>Behavior</strong>: Computes the UTF-8 character length of the string and binds or verifies the integer result in <code>?len</code>.</li>
+<li><strong>Example</strong>:
+<pre><code class="language-turtle">{ ?pw :value ?val . ?val string:length ?len . ?len math:greaterThan 8 } =&gt; { ?pw :status :strong } .
+</code></pre>
+</li>
+</ul>
+<hr />
+<h2 id="3-rust-evaluator-integration-reference"><a class="header" href="#3-rust-evaluator-integration-reference">3. Rust Evaluator Integration Reference</a></h2>
+<p>Below is the Rust structural design of the built-in dispatcher loop inside the query engine:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::rc::Rc;
+
+pub enum EvaluatedTerm {
+    Integer(i64),
+    Float(f64),
+    String(String),
+}
+
+pub struct BuiltinDispatcher;
+
+impl BuiltinDispatcher {
+    pub fn dispatch(
+        predicate_iri: &amp;str,
+        args: &amp;[EvaluatedTerm],
+    ) -&gt; Option&lt;EvaluatedTerm&gt; {
+        match predicate_iri {
+            "http://www.w3.org/2000/10/swap/math#sum" =&gt; {
+                Self::eval_math_sum(args)
+            }
+            "http://www.w3.org/2000/10/swap/string#concat" =&gt; {
+                Self::eval_string_concat(args)
+            }
+            _ =&gt; None, // Not a recognized built-in predicate
+        }
+    }
+
+    fn eval_math_sum(args: &amp;[EvaluatedTerm]) -&gt; Option&lt;EvaluatedTerm&gt; {
+        let mut sum = 0.0;
+        for arg in args {
+            match arg {
+                EvaluatedTerm::Integer(val) =&gt; sum += *val as f64,
+                EvaluatedTerm::Float(val) =&gt; sum += *val,
+                _ =&gt; return None, // Math operations are numeric only
+            }
+        }
+        Some(EvaluatedTerm::Float(sum))
+    }
+
+    fn eval_string_concat(args: &amp;[EvaluatedTerm]) -&gt; Option&lt;EvaluatedTerm&gt; {
+        let mut result = String::new();
+        for arg in args {
+            match arg {
+                EvaluatedTerm::String(val) =&gt; result.push_str(val),
+                _ =&gt; return None, // Concatenation operates on string terms
+            }
+        }
+        Some(EvaluatedTerm::String(result))
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/n3-lists.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/validation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/n3-lists.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/validation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,23 +1,24 @@
+// ============================================================================
+// IRI grammar (RFC 3987)
+// ============================================================================
+
 Iri = @{ IriScheme ~ ":" ~ IriHierPart ~ ("?" ~ IriQuery)? ~ ("#" ~ IriFragment)? }
 
-// NB(@althonos): IriPathAbEmpty is not mandatory if we reach the end of input
-//                here to allow URLs to hosts without trailing slashes, e.g.
-///               'http://example.com', which would be rejected otherwise.
 IriHierPart = {
-    ("//" ~ IriAuthority ~ (IriPathAbempty | EOI) )
+    ("//" ~ IriAuthority ~ (IriPathAbempty | EOI))
   | IriPathAbsolute
   | IriPathRootless
   | IriPathEmpty
 }
 
-IriAuthority = ${ (IriUserInfo ~ "@")? ~ IriHost ~ (":" ~ IriPort)?}
+IriAuthority = ${ (IriUserInfo ~ "@")? ~ IriHost ~ (":" ~ IriPort)? }
 IriUserInfo  = ${ (IriUnreserved | IriPctEncoded | IriSubDelims | ":")* }
 IriHost      = ${ IriIpLiteral | IriIpv4Address | IriRegName }
 IriRegName   = ${ (IriUnreserved | IriPctEncoded | IriSubDelims)* }
 
-IriPath         = ${IriPathAbempty | IriPathAbsolute | IriPathNoScheme | IriPathRootless | IriPathEmpty}
+IriPath         = ${ IriPathAbempty | IriPathAbsolute | IriPathNoScheme | IriPathRootless | IriPathEmpty }
 IriPathAbempty  = ${ ("/" ~ IriSegment)+ }
-IriPathAbsolute = ${ "/" ~ (IriSegmentNz ~ ("/" ~ IriSegment)* )? }
+IriPathAbsolute = ${ "/" ~ (IriSegmentNz ~ ("/" ~ IriSegment)*)? }
 IriPathNoScheme = ${ IriSegmentNzNc ~ ("/" ~ IriSegment)* }
 IriPathRootless = ${ IriSegmentNz ~ ("/" ~ IriSegment)* }
 IriPathEmpty    = ${ "" }
@@ -34,10 +35,10 @@ IriPort       = @{ ASCII_DIGIT* }
 
 IriPrivate    = ${ '\u{E000}'..'\u{F8FF}' | '\u{F0000}'..'\u{FFFFD}' | '\u{100000}'..'\u{10FFFD}' }
 IriPctEncoded = ${ "%" ~ ASCII_HEX_DIGIT ~ ASCII_HEX_DIGIT }
-IriUnreserved = @{ ("\\" ~ IriReserved) | ASCII_ALPHA | ASCII_DIGIT | "-" | "." | "_" | "~" }
+IriUnreserved = @{ ASCII_ALPHA | ASCII_DIGIT | "-" | "." | "_" | "~" }
 IriReserved   = @{ IriGenDelims | IriSubDelims }
-IriGenDelims  = @{":" | "/" | "?" | "#" | "[" | "]" | "@"}
-IriSubDelims  = @{"!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "="}
+IriGenDelims  = @{ ":" | "/" | "?" | "#" | "[" | "]" | "@" }
+IriSubDelims  = @{ "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "=" }
 IriDecOctet   = ${
     ASCII_DIGIT
   | (('1' .. '9') ~ ASCII_DIGIT)
@@ -46,45 +47,111 @@ IriDecOctet   = ${
   | ("25" ~ ('0' .. '5'))
 }
 
-IriIpChar = { IriUnreserved | IriPctEncoded | IriSubDelims | ":" | "@" }
-IriIpLiteral = { "[" ~ (IriIpv6Address ~ IriIpvFutureAddress)* ~ "]" }
+IriIpChar       = { IriUnreserved | IriPctEncoded | IriSubDelims | ":" | "@" }
+IriIpLiteral    = { "[" ~ (IriIpv6Address | IriIpvFutureAddress) ~ "]" }
 
-IriIpv6H16  = ${ ASCII_HEX_DIGIT{1,4} }
-IriIpv6Ls32 = { (IriIpv6H16 ~ ":" ~ IriIpv6H16) | IriIpv4Address }
+IriIpv6H16      = ${ ASCII_HEX_DIGIT{1,4} }
+IriIpv6Ls32     = { (IriIpv6H16 ~ ":" ~ IriIpv6H16) | IriIpv4Address }
 
 IriIpv4Address      = ${ IriDecOctet ~ "." ~ IriDecOctet ~ "." ~ IriDecOctet ~ "." ~ IriDecOctet }
 IriIpvFutureAddress = ${ "v" ~ ASCII_HEX_DIGIT+ ~ "." ~ (IriUnreserved | IriSubDelims | ":")+ }
 IriIpv6Address      = ${
-    ( (IriIpv6H16 ~ ":"){6} ~ IriIpv6Ls32 )
-  | ( "::" ~ (IriIpv6H16 ~ ":"){5} ~ IriIpv6Ls32 )
-  | ( IriIpv6H16? ~ "::" ~ (IriIpv6H16 ~ ":"){4} ~ IriIpv6Ls32 )
-  | ( ((IriIpv6H16 ~ ":"){1} ~ IriIpv6H16)? ~ "::" ~ (IriIpv6H16 ~ ":"){3} ~ IriIpv6Ls32)
-  | ( ((IriIpv6H16 ~ ":"){2} ~ IriIpv6H16)? ~ "::" ~ (IriIpv6H16 ~ ":"){2} ~ IriIpv6Ls32)
-  | ( ((IriIpv6H16 ~ ":"){3} ~ IriIpv6H16)? ~ "::" ~ IriIpv6H16 ~ ":" ~ IriIpv6Ls32)
-  | ( ((IriIpv6H16 ~ ":"){4} ~ IriIpv6H16)? ~ "::" ~ IriIpv6Ls32)
-  | ( ((IriIpv6H16 ~ ":"){5} ~ IriIpv6H16)? ~ "::" ~ IriIpv6H16)
-  | ( ((IriIpv6H16 ~ ":"){6} ~ IriIpv6H16)? ~ "::")
+    ((IriIpv6H16 ~ ":"){6} ~ IriIpv6Ls32)
+  | ("::" ~ (IriIpv6H16 ~ ":"){5} ~ IriIpv6Ls32)
+  | (IriIpv6H16? ~ "::" ~ (IriIpv6H16 ~ ":"){4} ~ IriIpv6Ls32)
+  | (((IriIpv6H16 ~ ":"){1} ~ IriIpv6H16)? ~ "::" ~ (IriIpv6H16 ~ ":"){3} ~ IriIpv6Ls32)
+  | (((IriIpv6H16 ~ ":"){2} ~ IriIpv6H16)? ~ "::" ~ (IriIpv6H16 ~ ":"){2} ~ IriIpv6Ls32)
+  | (((IriIpv6H16 ~ ":"){3} ~ IriIpv6H16)? ~ "::" ~ IriIpv6H16 ~ ":" ~ IriIpv6Ls32)
+  | (((IriIpv6H16 ~ ":"){4} ~ IriIpv6H16)? ~ "::" ~ IriIpv6Ls32)
+  | (((IriIpv6H16 ~ ":"){5} ~ IriIpv6H16)? ~ "::" ~ IriIpv6H16)
+  | (((IriIpv6H16 ~ ":"){6} ~ IriIpv6H16)? ~ "::")
 }
 
+// ============================================================================
+// Whitespace and comments
+// ============================================================================
 
-// N3 rule
-//WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
-WS = { " " | "\t" | "\r" | "\n" }
-SPACE = { " " | "\t"}
-NewLine = { "\r" | "\n" }
-Var = {"?"~ASCII_ALPHA+~ASCII_ALPHANUMERIC*}
-Prefix = {"@prefix"~SPACE+~PrefixIdentifier~":"~SPACE+~"<"~Iri~">"~WS* ~"."~WS*}
-PrefixIdentifier = {ASCII_ALPHANUMERIC*}
-LocalNameChar = {ASCII_ALPHANUMERIC | "_"}
-Prefixed = {PrefixIdentifier ~":"~LocalNameChar+}
-Term = {"<"~Iri~">" | Prefixed}
-RdfType= {"a"}
-varOrTerm = { Term | Var}
-Subject = { Term | Var}
-Property = { Term | Var | RdfType}
-Object = { Term | Var}
-TP = { WS*~Subject ~WS+~ Property ~WS+~ Object ~WS* ~"."? ~WS* }
-Body = {"{"~TP+~"}"}
-Head = {"{"~WS*~TP~WS*~"}"}
-rule = { Body~WS*~"=>"~WS*~Head~WS*~"."? ~WS*}
-document = {Prefix* ~ NewLine* ~rule*}
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT    = _{ "#" ~ (!"\n" ~ ANY)* }
+
+// ============================================================================
+// N3 / Datalog rule grammar
+// ============================================================================
+
+// Variables: ?name
+Var = @{ "?" ~ ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
+
+// Prefix declarations: @prefix prefix: <IRI> .
+PrefixIdentifier = @{ ASCII_ALPHANUMERIC* }
+Prefix = { "@prefix" ~ PrefixIdentifier ~ ":" ~ "<" ~ Iri ~ ">" ~ "." }
+
+// Local names may contain alphanumerics, underscore, hyphen, dot in the middle.
+// Local names CANNOT end with a dot (dots are triple-terminators in Notation3).
+// LocalNameEnd = any non-dot char; LocalNameBody = (non-dot | (dot ~ non-dot))* ~ non-dot
+// This grammar prevents trailing dots without backtracking.
+LocalNameEnd  = @{ ASCII_ALPHANUMERIC | "_" | "-" }
+LocalNameBody = @{ LocalNameEnd ~ ("." ~ LocalNameEnd | LocalNameEnd)* }
+Prefixed      = @{ PrefixIdentifier ~ ":" ~ LocalNameBody? }
+
+// Blank nodes: _:label
+BlankNodeLabel = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_" | "-" | ".")* }
+BlankNode      = @{ "_:" ~ BlankNodeLabel }
+
+// String literals (single-line and triple-quoted)
+StringTripleDouble = @{ "\"\"\"" ~ (!"\"\"\"" ~ ANY)* ~ "\"\"\"" }
+StringDouble       = @{ "\"" ~ (!"\"" ~ !"\n" ~ ANY)* ~ "\"" }
+StringTripleSingle = @{ "'''" ~ (!"'''" ~ ANY)* ~ "'''" }
+StringSingle       = @{ "'" ~ (!"'" ~ !"\n" ~ ANY)* ~ "'" }
+StringValue        = @{ StringTripleDouble | StringDouble | StringTripleSingle | StringSingle }
+
+// Language tags: @en, @en-US
+LangTag = @{ "@" ~ ASCII_ALPHA+ ~ ("-" ~ (ASCII_ALPHA | ASCII_DIGIT)+)* }
+
+// Datatype: ^^<IRI> or ^^prefix:local
+DatatypeAnnotation = { "^^" ~ ("<" ~ Iri ~ ">" | Prefixed) }
+
+// Numeric literals
+IntegerLiteral = @{ ("+" | "-")? ~ ASCII_DIGIT+ }
+DecimalLiteral = @{ ("+" | "-")? ~ ASCII_DIGIT* ~ "." ~ ASCII_DIGIT+ }
+DoubleLiteral  = @{ ("+" | "-")? ~ (ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* | "." ~ ASCII_DIGIT+) ~ (("e" | "E") ~ ("+" | "-")? ~ ASCII_DIGIT+) }
+BoolLiteral    = @{ "true" | "false" }
+
+// Full literal: string with optional lang/datatype, or numeric/boolean
+Literal = {
+    StringValue ~ (LangTag | DatatypeAnnotation)?
+  | DoubleLiteral
+  | DecimalLiteral
+  | IntegerLiteral
+  | BoolLiteral
+}
+
+// Named nodes: <IRI>, prefixed, or rdf:type shorthand "a"
+RdfType = { "a" }
+IriRef  = { "<" ~ Iri ~ ">" }
+Term    = { IriRef | Prefixed }
+
+// Any term position: IRI, prefixed, blank node, or literal
+varOrTerm = { Term | Var | BlankNode | Literal }
+
+// Triple pattern positions
+Subject  = { IriRef | Prefixed | Var | BlankNode }
+Property = { IriRef | Prefixed | Var | RdfType }
+Object   = { IriRef | Prefixed | Var | BlankNode | Literal }
+
+// Triple pattern (TP): "subject property object ."
+TP = { Subject ~ Property ~ Object ~ "."? }
+
+// Body literal: optionally negated TP
+BodyLiteral = { ("not" ~ "{" ~ TP ~ "}") | TP }
+
+// Rule body: one or more body literals in braces
+Body = { "{" ~ BodyLiteral+ ~ "}" }
+
+// Rule head: one or more TPs in braces (multi-head support)
+Head = { "{" ~ TP+ ~ "}" }
+
+// A complete rule: {body} => {head} .
+rule = { Body ~ "=>" ~ Head ~ "."? }
+
+// Document: prefix declarations followed by rules
+document = { SOI ~ Prefix* ~ rule* ~ EOI }

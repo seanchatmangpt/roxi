@@ -13,13 +13,13 @@ trait ISubject<'a, T: IObserver> {
 
 struct Subject<'a, T: IObserver> {
     observers: Vec<&'a T>,
-    data: Vec<i32>
+    data: Vec<i32>,
 }
 impl<'a, T: IObserver + PartialEq> Subject<'a, T> {
     fn new() -> Subject<'a, T> {
         Subject {
             observers: Vec::new(),
-            data: Vec::new()
+            data: Vec::new(),
         }
     }
 }
@@ -48,25 +48,27 @@ impl<'a, T: IObserver + PartialEq> ISubject<'a, T> for Subject<'a, T> {
 #[derive(PartialEq)]
 struct ConcreteObserver {
     id: i32,
-    data: i32
+    data: i32,
 }
 impl IObserver for ConcreteObserver {
-    fn update(&self, new: Vec<i32>) -> Vec<i32>{
-        println!("Observer id:{} received event with data {:?}!", self.id, new);
+    fn update(&self, new: Vec<i32>) -> Vec<i32> {
+        println!(
+            "Observer id:{} received event with data {:?}!",
+            self.id, new
+        );
         vec![self.data]
     }
-
 }
-impl ConcreteObserver{
-    fn update_data(&mut self, new_data:i32){
+impl ConcreteObserver {
+    fn update_data(&mut self, new_data: i32) {
         self.data = new_data;
     }
 }
 #[test]
 fn test_observer() {
     let mut subject = Subject::new();
-    let observer_a = ConcreteObserver { id: 1, data:0 };
-    let observer_b = ConcreteObserver { id: 2 , data:0};
+    let observer_a = ConcreteObserver { id: 1, data: 0 };
+    let observer_b = ConcreteObserver { id: 2, data: 0 };
 
     subject.attach(&observer_a);
     subject.attach(&observer_b);
@@ -75,5 +77,4 @@ fn test_observer() {
     subject.add_data(1339);
     subject.detach(&observer_b);
     subject.notify_observers();
-
 }

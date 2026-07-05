@@ -1,0 +1,3 @@
+## 2026-07-04T20:26:47-07:00
+
+Perform a forensic integrity audit on the ShEx implementation in `lib/src/shex.rs` and related files. Verify that the implementation genuinely parses ShExJ JSON, compiles it to IR, constructs the `rudof_rdf::rdf_impl::OxigraphInMemory` RDF graph, executes the `shex_validation::Validator` validator, and maps results to native Roxi terms via the `oxrdf_adapter`. Confirm that there is NO cheating, dummy/facade implementations, or hardcoded/fabricated test outputs in the codebase. Verify all tests run and pass. Report your verdict (CLEAN/VIOLATION) with complete evidence.

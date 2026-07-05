@@ -1,94 +1,99 @@
-use crate::{BackwardChainer, Binding, Encoder, QueryEngine, Reasoner, Rule, RuleIndex, SimpleQueryEngine, Triple, TripleIndex, TripleStore, VarOrTerm};
-#[cfg(not(test))]
-use log::{info, warn,trace}; // Use log crate when building application
+use crate::{
+    BackwardChainer, Binding, Encoder, QueryEngine, Reasoner, Rule, RuleIndex, SimpleQueryEngine,
+    Triple, TripleIndex, TripleStore, VarOrTerm,
+};
+use log::{info, trace, warn}; // Use log crate when building application
 use std::fmt::Write;
 
-#[cfg(test)]
-use std::{println as info, println as warn, println as trace};
-use std::rc::Rc;
 use crate::utils::Utils;
+use std::rc::Rc;
 
-pub struct DRed{
+
+pub struct DRed {
     pub rules: Vec<Rule>,
     pub rules_index: RuleIndex,
-    pub triple_index : TripleIndex,
+    pub triple_index: TripleIndex,
     reasoner: Reasoner,
 }
 
-impl DRed{
-    fn new() -> Self{
-        Self{rules: Vec::new(), rules_index: RuleIndex::new(), triple_index: TripleIndex::new(),  reasoner: Reasoner{} }
+impl DRed {
+    pub fn new() -> Self {
+        Self {
+            rules: Vec::new(),
+            rules_index: RuleIndex::new(),
+            triple_index: TripleIndex::new(),
+            reasoner: Reasoner {},
+        }
     }
-    pub fn from(data:&str) -> Self{
+    pub fn from(data: &str) -> Self {
         let triple_store = TripleStore::from(&data);
-        Self{rules: triple_store.rules, rules_index: triple_store.rules_index , triple_index: triple_store.triple_index,   reasoner: Reasoner{} }
+        Self {
+            rules: triple_store.rules,
+            rules_index: triple_store.rules_index,
+            triple_index: triple_store.triple_index,
+            reasoner: Reasoner {},
+        }
     }
-    pub fn add(&mut self, triple: Triple){
-        trace!{"Adding triple: {:?}", Utils::decode_triple(&triple) }
+    pub fn add(&mut self, triple: Triple) {
+        trace! {"Adding triple: {:?}", Utils::decode_triple(&triple) }
         self.triple_index.add(triple);
     }
-    pub fn add_ref(&mut self, triple: Rc<Triple>){
-        trace!{"Adding triple: {:?}", Utils::decode_triple(triple.as_ref()) }
+    pub fn add_ref(&mut self, triple: Rc<Triple>) {
+        trace! {"Adding triple: {:?}", Utils::decode_triple(triple.as_ref()) }
         self.triple_index.add_ref(triple);
     }
-    pub fn remove_ref(&mut self, triple: Rc<Triple>){
-        //println!("{:?}",self.encoder);
-
-        trace!{"Removing triple: {:?}", Utils::decode_triple(triple.as_ref()) }
+    pub fn remove_ref(&mut self, triple: Rc<Triple>) {
+        trace! {"Removing triple: {:?}", Utils::decode_triple(triple.as_ref()) }
         // over delete
         let mut over_deletion = Vec::new();
         let mut stack = Vec::from([triple.as_ref().clone()]);
 
-        while let Some(current_triple) = stack.pop(){
-            println!("Investigating deletion {:?}",Utils::decode_triple(&current_triple));
-
+        while let Some(current_triple) = stack.pop() {
             let matching_rules = self.rules_index.find_match(&current_triple);
-            let matching_rules: Vec<Rule> = matching_rules.clone().into_iter().flat_map(|r| Reasoner::substitute_rule(&current_triple, r)).collect();
-            matching_rules.iter().map(|r|Utils::decode_rule(r)).for_each(|r|println!("Matching rules {:?}",r));
+            let matching_rules: Vec<Rule> = matching_rules
+                .clone()
+                .into_iter()
+                .flat_map(|r| Reasoner::substitute_rule(&current_triple, r))
+                .collect();
 
-            let delete_triples = Reasoner::infer_rule_heads(&self.triple_index, None, matching_rules);
+            let delete_triples =
+                Reasoner::infer_rule_heads(&self.triple_index, None, matching_rules);
             delete_triples.into_iter().for_each(|t| {
-                println!("Marked head for deletion {:?}",Utils::decode_triple(&t));
-                if ! over_deletion.contains(&t){
+                if !over_deletion.contains(&t) {
                     stack.push(t.clone());
                     over_deletion.push(t);
                 }
             });
-
         }
 
-        over_deletion.iter().map(|t|Utils::decode_triple(t)).for_each(|t|println!("Overdeleted {:?}",t));
         // delete overdeletion
-        over_deletion.iter().for_each(|t|self.triple_index.remove_ref(t));
+        over_deletion
+            .iter()
+            .for_each(|t| self.triple_index.remove_ref(t));
         // delete E-
         self.triple_index.remove_ref(&triple);
 
-        let mut test = ("123",true);
-        let mut ref_test = &mut test;
-        ref_test.1=false;
-        let delete_list : Vec<(Triple,bool)>= over_deletion.into_iter().map(|t|(t,false)).collect();
+        let mut delete_list: Vec<(Triple, bool)> =
+            over_deletion.into_iter().map(|t| (t, false)).collect();
         // Rederivation step
-        let mut delete_num = delete_list.len()+1;
-        let mut prev_delete_num = delete_num+1;
-        while delete_num < prev_delete_num{
+        let mut delete_num = delete_list.len();
+        let mut prev_delete_num = delete_num + 1;
+        while delete_num < prev_delete_num {
             prev_delete_num = delete_num;
-            for (delete_triple, mut delete_status) in  &delete_list {
+            for i in 0..delete_list.len() {
+                let (delete_triple, delete_status) = &delete_list[i].clone();
                 if !delete_status {
-                    println!("Trying redirive {:?}", Utils::decode_triple( &delete_triple));
-
-                    let matched_rules = Self::find_rules_by_head(&self.rules_index, &delete_triple);
+                    let matched_rules = Self::find_rules_by_head(&self.rules_index, delete_triple);
                     for (matched_rule, bindings) in matched_rules {
-                        println!("\t matched rule {:?}", Utils::decode_rule( &matched_rule));
-
-                        println!("\tBindings {:?}", bindings);
-                        let substitute_rule = Reasoner::substitute_rule_body_with_binding(&matched_rule, &bindings);
-                        substitute_rule.iter().for_each(|r| println!("\t subsitute rule_item {:?}", Utils::decode_triple( r)));
-                        if let Some(_) = SimpleQueryEngine::query(&self.triple_index, &substitute_rule, None) {
-                            if ! self.triple_index.contains(delete_triple) {
-                                println!("\t Reinsert {:?}", Utils::decode_triple( &delete_triple));
+                        let substitute_rule =
+                            Reasoner::substitute_rule_body_with_binding(&matched_rule, &bindings);
+                        if let Some(_) =
+                            SimpleQueryEngine::query(&self.triple_index, &substitute_rule, None)
+                        {
+                            if !self.triple_index.contains(delete_triple) {
                                 self.triple_index.add(delete_triple.clone());
                                 delete_num -= 1;
-                                delete_status = true;
+                                delete_list[i].1 = true;
                                 break;
                             }
                         }
@@ -96,45 +101,64 @@ impl DRed{
                 }
             }
         }
-
     }
-    //todo create index on rule heads
-    pub(crate) fn find_rules_by_head(rules_index: &RuleIndex, head_triple: &Triple) -> Vec<(Rc<Rule>, Binding)> {
+    /// Find all rules whose head matches `head_triple`, returning each rule with bound variable mappings.
+    /// Uses the head-predicate index for efficient O(1) lookup.
+    pub(crate) fn find_rules_by_head(
+        rules_index: &RuleIndex,
+        head_triple: &Triple,
+    ) -> Vec<(Rc<Rule>, Binding)> {
+        let candidates: &[Rc<Rule>] = if head_triple.p.is_term() {
+            // Fast path: look up only rules whose head predicate matches
+            rules_index
+                .head_by_pred
+                .get(&head_triple.p.to_encoded())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[])
+        } else {
+            // Variable predicate: must check all rules
+            rules_index.rules.as_slice()
+        };
         let mut rule_matches = Vec::new();
-        for rule in rules_index.rules.iter() {
+        for rule in candidates.iter() {
             let head: &Triple = &rule.head;
             let mut binding = Binding::new();
-            if Self::eval_triple_element(&head.s, &head_triple.s, &mut binding) &&
-                Self::eval_triple_element(&head.p, &head_triple.p, &mut binding) &&
-                Self::eval_triple_element(&head.o, &head_triple.o, &mut binding) {
+            if Self::eval_triple_element(&head.s, &head_triple.s, &mut binding)
+                && Self::eval_triple_element(&head.p, &head_triple.p, &mut binding)
+                && Self::eval_triple_element(&head.o, &head_triple.o, &mut binding)
+            {
                 rule_matches.push((rule.clone(), binding));
             }
         }
         rule_matches
     }
-    //todo check if code can be reused
+    /// Unify a rule head element with a query element, adding variable bindings.
     fn eval_triple_element(left: &VarOrTerm, right: &VarOrTerm, bindings: &mut Binding) -> bool {
         if let (VarOrTerm::Var(left_name), VarOrTerm::Term(right_name)) = (left, right) {
-            bindings.add(&left_name.name, right_name.iri);
+            bindings.add(&left_name.name, right_name.id());
             true
         } else {
             left.eq(right)
         }
     }
 
-    pub fn materialize(&mut self) -> Vec<Triple>{
-        self.reasoner.materialize(&mut self.triple_index, &self.rules_index)
+    pub fn materialize(&mut self) -> Vec<Triple> {
+        let aggregates = std::collections::HashMap::new();
+        let strata = crate::datalog::validate_rules(&self.rules, &aggregates)
+            .unwrap_or_else(|_| vec![0; self.rules.len()]);
+        self.reasoner
+            .materialize(&mut self.triple_index, &self.rules, &strata, &aggregates)
     }
 }
-mod test{
-    use std::rc::Rc;
+mod test {
     use crate::dred::DRed;
-    use crate::{Triple, VarOrTerm};
     use crate::utils::Utils;
+    use crate::{Triple, VarOrTerm};
+    use std::rc::Rc;
 
     #[test]
-    fn test(){
-        let data=":john :teaches :math.\n\
+    fn test() {
+        let data = ":john :teaches :math.\n\
                 :peter :teaches :math.\n\
                 :john :teaches :physics.\n\
             {?s :teaches ?y.}=>{?s a :Person.}\n\
@@ -143,14 +167,20 @@ mod test{
             {?s a :Person.?s :teaches ?y.?y a :Course.}=>{?s a :TA.}";
         let mut dred = DRed::from(data);
         let inferred = dred.materialize();
-        inferred.iter().for_each(|t|println!("{:?}",Utils::decode_triple(t)));
+        inferred
+            .iter()
+            .for_each(|t| println!("{:?}", Utils::decode_triple(t)));
         println!("{:?}", inferred);
         assert_eq!(9, dred.triple_index.len());
 
-        let remove_triple = Triple{s:VarOrTerm::new_term(":john".to_string()),p:VarOrTerm::new_term(":teaches".to_string()),o:VarOrTerm::new_term(":math".to_string()), g: None};
+        let remove_triple = Triple {
+            s: VarOrTerm::new_term(":john".to_string()),
+            p: VarOrTerm::new_term(":teaches".to_string()),
+            o: VarOrTerm::new_term(":math".to_string()),
+            g: None,
+        };
 
         dred.remove_ref(Rc::new(remove_triple));
         assert_eq!(8, dred.triple_index.len());
-
     }
 }
