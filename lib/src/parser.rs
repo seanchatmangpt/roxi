@@ -145,6 +145,15 @@ impl Parser {
     pub fn parse_rules(parse_string: &str) -> Result<Vec<Rule>, String> {
         n3rule_parser::parse(parse_string)
     }
+
+    /// Parse a complete N3 document (facts and rules together) using the
+    /// pest-based grammar. Unlike `parse_rules`, this also returns plain
+    /// top-level fact triples, and understands `@prefix` declarations, RDF
+    /// lists ("(...)"), and quoted graphs ("{...}" used as a term) -- none of
+    /// which the legacy line-based `parse` can handle.
+    pub fn parse_n3_document(parse_string: &str) -> Result<(Vec<Triple>, Vec<Rule>), String> {
+        n3rule_parser::parse_document(parse_string)
+    }
 }
 
 mod test {

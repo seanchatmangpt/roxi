@@ -1,0 +1,10 @@
+# From https://github.com/eyereasoner/eye/blob/master/reasoning/basic-monadic/
+# (query.n3's 10-way cycle-detection rule over graphgen.n3-generated data).
+#
+# BLOCKED: the rule `{?R :cycle (?D0 ?D1 ... ?D9 ?D0)} <= {?D0 ?R ?D1. ...
+# ?D9 ?R ?D0.}` needs the same list-term structural unification this engine
+# doesn't implement (see good_cobbler.n3's blocking-reason comment) -- here
+# to detect a repeated variable (?D0) closing the cycle inside a 11-element
+# list pattern -- plus its accompanying 1tt*.ttl fixture files are randomly
+# generated benchmark data (10^n triples) rather than a small illustrative
+# fact set. Out of scope; not vendored as runnable input.

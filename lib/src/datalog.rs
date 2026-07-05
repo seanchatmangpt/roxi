@@ -2,6 +2,29 @@ use std::collections::{HashMap, HashSet};
 use crate::triples::{Rule, Triple, Aggregate, VarOrTerm};
 use crate::encoding::Encoder;
 
+/// Recursively collect the variables mentioned inside a quoted-graph
+/// ("formula") term, if `term` names one. Used so that a variable which only
+/// appears *nested inside* a `log:implies` consequent formula (e.g.
+/// `?formula log:implies { ?citizen a :TaxPayer }`) still counts as bound by
+/// that positive body literal for the safety check below -- the dynamic
+/// rule-reification mechanism in `Reasoner::materialize` is what actually
+/// binds it at runtime (by matching the antecedent formula against the data),
+/// which the static safety check here has no way to simulate, so we simply
+/// trust that any variable reachable from a positive-literal's operands
+/// (directly or via a nested formula) is a legitimate binding site.
+fn collect_formula_vars(term: &VarOrTerm, out: &mut HashSet<usize>) {
+    if !term.is_term() {
+        return;
+    }
+    if let Some(triples) = VarOrTerm::formula_triples(term.to_encoded()) {
+        for t in &triples {
+            if t.s.is_var() { out.insert(t.s.to_encoded()); } else { collect_formula_vars(&t.s, out); }
+            if t.p.is_var() { out.insert(t.p.to_encoded()); }
+            if t.o.is_var() { out.insert(t.o.to_encoded()); } else { collect_formula_vars(&t.o, out); }
+        }
+    }
+}
+
 /// Identifies the "relation" a triple pattern talks about.
 /// For rdf:type patterns we use the class (object) as the relation identifier,
 /// since typing statements group by class. For all other patterns we use the
@@ -39,9 +62,9 @@ pub fn validate_rules(
         let mut positive_vars: HashSet<usize> = HashSet::new();
         for lit in &rule.body {
             if !lit.negated {
-                if lit.pattern.s.is_var() { positive_vars.insert(lit.pattern.s.to_encoded()); }
+                if lit.pattern.s.is_var() { positive_vars.insert(lit.pattern.s.to_encoded()); } else { collect_formula_vars(&lit.pattern.s, &mut positive_vars); }
                 if lit.pattern.p.is_var() { positive_vars.insert(lit.pattern.p.to_encoded()); }
-                if lit.pattern.o.is_var() { positive_vars.insert(lit.pattern.o.to_encoded()); }
+                if lit.pattern.o.is_var() { positive_vars.insert(lit.pattern.o.to_encoded()); } else { collect_formula_vars(&lit.pattern.o, &mut positive_vars); }
             }
         }
 

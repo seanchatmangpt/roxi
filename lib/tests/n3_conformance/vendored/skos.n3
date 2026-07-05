@@ -1,0 +1,15 @@
+# From https://github.com/eyereasoner/eye/blob/master/reasoning/skos/skos-rules.n3
+#
+# BLOCKED: beyond the ordinary forward-chaining SKOS rules (subject/inverse
+# properties, transitivity -- all of which this engine's plain rule support
+# already handles), skos-rules.n3 also contains genuine consistency-check
+# rules with a bodyless `=> false.` head (e.g. "Hierarchical and associative
+# relations are disjoint": `{?x skos:related ?y. ?x skos:broaderTransitive
+# ?y} => false.`), predicate-object-list-with-shared-subject syntax
+# (`?c skos:prefLabel ?l; skos:altLabel ?l`), and rules requiring
+# `func:lang-from-PlainLiteral` (the `func:` RIF-builtin-function namespace,
+# entirely unimplemented here). `=> false` isn't a valid Triple this engine's
+# `Rule.head: Triple` can represent at all (there's no boolean/denial rule
+# head type), so parsing/loading the ruleset outright would need engine
+# changes beyond this ticket's builtins-and-conformance scope. Not vendored
+# as runnable input.

@@ -1,0 +1,9 @@
+@prefix : <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:item :label "Widget"@en .
+:item :price "9.99"^^xsd:decimal .
+:item :count 5 .
+:item :active true .
+
+{ ?s :label ?l . ?s :price ?p . ?s :count ?c . ?s :active ?a } => { ?s :fullySpecified true }.

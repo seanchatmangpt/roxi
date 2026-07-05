@@ -1,0 +1,8 @@
+# From https://github.com/eyereasoner/eye/blob/master/reasoning/edt/
+# Not vendored as its own file: `edt` uses the exact same
+# `{?X a ?D} <= {?C rdfs:subClassOf ?D. ?X a ?C}` backward subClassOf rule as
+# `deep-taxonomy` (see deep_taxonomy.n3 above), just over a differently-named
+# 10000-level chain (30002 rdfs:subClassOf triples in test-dl.ttl) -- i.e. a
+# duplicate scalability benchmark of the same feature at a size unsuitable
+# for a fast conformance test. Skipped as redundant; see deep_taxonomy.n3 for
+# the (truncated) case that actually runs.

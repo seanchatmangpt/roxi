@@ -1,0 +1,22 @@
+# Vendored from https://github.com/eyereasoner/eye/blob/master/reasoning/backward/backward.n3
+# Unmodified.
+#
+# BLOCKED (see manifest.json "status": "ignored"): EYE proves this
+# goal-directed, seeding the backward rule with the concrete query
+# `5 :moreInterestingThan 3` (see backward-query.n3 upstream) and working
+# backward to check `5 math:greaterThan 3`. This crate's engine is purely
+# forward-chaining: the `<=` rule desugars to the forward rule
+# `{?X math:greaterThan ?Y} => {?X :moreInterestingThan ?Y}`, but with no
+# facts providing concrete `?X`/`?Y` candidates to iterate over, forward
+# evaluation of `?X math:greaterThan ?Y` over an empty/var-only pattern never
+# binds anything -- there is no query/goal-injection mechanism to seed `5`
+# and `3` as the values to test, the way EYE's query file does.
+@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+@prefix : <http://example.org/#>.
+
+{
+    ?X :moreInterestingThan ?Y.
+} <= {
+    ?X math:greaterThan ?Y.
+}.

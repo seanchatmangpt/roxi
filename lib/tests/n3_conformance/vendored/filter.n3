@@ -1,0 +1,10 @@
+# From https://github.com/eyereasoner/eye/blob/master/reasoning/filter/
+# (filter.n3 facts + filter-query.n3 rule).
+#
+# BLOCKED: filter-query.n3's collectAllIn use is otherwise exactly what
+# log:collectAllIn (see builtins/log_collect_all_in.n3) supports --
+# `(?param { :Let :param ?param. ?param string:lessThan "Louie" } ?filteredParams)
+# log:collectAllIn ?scope.` -- but its embedded formula itself filters via
+# `string:lessThan`, a `string:` built-in this crate has not implemented (the
+# string builtins added so far are string:length/string:concat only). Out of
+# scope for this ticket; not vendored as runnable input.

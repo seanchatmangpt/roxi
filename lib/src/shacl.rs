@@ -76,6 +76,14 @@ pub struct Vocab {
     pub sh_one_or_more_path: usize,
     pub sh_zero_or_one_path: usize,
 
+    // SPARQL-based constraints (sh:sparql / SPARQLConstraintComponent) and targets
+    pub sh_sparql: usize,
+    pub sh_select: usize,
+    pub sh_ask: usize,
+    pub sh_prefixes: usize,
+    pub sh_target: usize,
+    pub sh_sparql_target: usize,
+
     // sh:nodeKind values
     pub sh_iri: usize,
     pub sh_blank_node: usize,
@@ -112,6 +120,7 @@ pub struct Vocab {
     pub sh_qualified_value_shape_constraint_component: usize,
     pub sh_closed_constraint_component: usize,
     pub sh_node_constraint_component: usize,
+    pub sh_sparql_constraint_component: usize,
 }
 
 impl Vocab {
@@ -185,6 +194,14 @@ impl Vocab {
             sh_one_or_more_path: Encoder::add("<http://www.w3.org/ns/shacl#oneOrMorePath>".to_string()),
             sh_zero_or_one_path: Encoder::add("<http://www.w3.org/ns/shacl#zeroOrOnePath>".to_string()),
 
+            // SPARQL-based constraints (sh:sparql / SPARQLConstraintComponent) and targets
+            sh_sparql: Encoder::add("<http://www.w3.org/ns/shacl#sparql>".to_string()),
+            sh_select: Encoder::add("<http://www.w3.org/ns/shacl#select>".to_string()),
+            sh_ask: Encoder::add("<http://www.w3.org/ns/shacl#ask>".to_string()),
+            sh_prefixes: Encoder::add("<http://www.w3.org/ns/shacl#prefixes>".to_string()),
+            sh_target: Encoder::add("<http://www.w3.org/ns/shacl#target>".to_string()),
+            sh_sparql_target: Encoder::add("<http://www.w3.org/ns/shacl#SPARQLTarget>".to_string()),
+
             // sh:nodeKind values
             sh_iri: Encoder::add("<http://www.w3.org/ns/shacl#IRI>".to_string()),
             sh_blank_node: Encoder::add("<http://www.w3.org/ns/shacl#BlankNode>".to_string()),
@@ -221,6 +238,7 @@ impl Vocab {
             sh_qualified_value_shape_constraint_component: Encoder::add("<http://www.w3.org/ns/shacl#QualifiedValueShapeConstraintComponent>".to_string()),
             sh_closed_constraint_component: Encoder::add("<http://www.w3.org/ns/shacl#ClosedConstraintComponent>".to_string()),
             sh_node_constraint_component: Encoder::add("<http://www.w3.org/ns/shacl#NodeConstraintComponent>".to_string()),
+            sh_sparql_constraint_component: Encoder::add("<http://www.w3.org/ns/shacl#SPARQLConstraintComponent>".to_string()),
         }
     }
 }
@@ -417,6 +435,7 @@ impl Validator {
             vocab.sh_target_node,
             vocab.sh_target_subjects_of,
             vocab.sh_target_objects_of,
+            vocab.sh_target,
         ] {
             if let Some(objs) = shapes_index.pos.get(&t) {
                 for subjs in objs.values() {
@@ -446,6 +465,16 @@ impl Validator {
             }
         }
 
+        // Per SHACL Core (1.0), sh:conforms is false whenever ANY validation
+        // result exists, regardless of severity -- Info and Warning results
+        // count too, not just Violation. This is confirmed by the real W3C
+        // data-shapes test suite (e.g. misc/severity-001.ttl: a shape with
+        // sh:severity sh:Warning still expects sh:conforms "false"). SHACL
+        // 1.2 introduces an opt-in sh:conformanceDisallows to narrow this,
+        // but that's a distinct, newer mechanism this validator doesn't
+        // implement -- the unconditional default (all severities disallow
+        // conformance) is what SHACL Core actually specifies and what every
+        // vendored conformance case expects.
         let conforms = results.is_empty();
         ValidationReport { conforms, results }
     }
@@ -557,8 +586,60 @@ fn get_datatype(term_id: usize) -> Option<usize> {
     }
 }
 
+/// Per the SHACL spec's DatatypeConstraintComponent: value nodes must not
+/// only be *declared* with the expected datatype, but for datatypes that are
+/// "recognized" (i.e. the small set of XSD datatypes with well-defined
+/// lexical spaces we validate here), the lexical form must also be
+/// well-formed for that datatype. Datatypes outside this small set are not
+/// lexically validated -- a literal declared with such a datatype conforms
+/// based on the declared datatype IRI alone, per spec's fallback rule for
+/// unrecognized datatypes.
+fn is_lexically_valid_for_datatype(lexical: &str, datatype_iri: &str) -> bool {
+    let t = lexical.trim();
+    match datatype_iri {
+        "http://www.w3.org/2001/XMLSchema#integer"
+        | "http://www.w3.org/2001/XMLSchema#int"
+        | "http://www.w3.org/2001/XMLSchema#long"
+        | "http://www.w3.org/2001/XMLSchema#short"
+        | "http://www.w3.org/2001/XMLSchema#byte"
+        | "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+        | "http://www.w3.org/2001/XMLSchema#positiveInteger"
+        | "http://www.w3.org/2001/XMLSchema#nonPositiveInteger"
+        | "http://www.w3.org/2001/XMLSchema#negativeInteger"
+        | "http://www.w3.org/2001/XMLSchema#unsignedLong"
+        | "http://www.w3.org/2001/XMLSchema#unsignedInt"
+        | "http://www.w3.org/2001/XMLSchema#unsignedShort"
+        | "http://www.w3.org/2001/XMLSchema#unsignedByte" => {
+            let digits = t.strip_prefix(['+', '-']).unwrap_or(t);
+            !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit())
+        }
+        "http://www.w3.org/2001/XMLSchema#decimal" => {
+            let body = t.strip_prefix(['+', '-']).unwrap_or(t);
+            !body.is_empty()
+                && body.chars().all(|c| c.is_ascii_digit() || c == '.')
+                && body.matches('.').count() <= 1
+                && body.chars().any(|c| c.is_ascii_digit())
+        }
+        "http://www.w3.org/2001/XMLSchema#double" | "http://www.w3.org/2001/XMLSchema#float" => {
+            t == "INF" || t == "-INF" || t == "NaN" || t.parse::<f64>().is_ok()
+        }
+        "http://www.w3.org/2001/XMLSchema#boolean" => {
+            matches!(t, "true" | "false" | "1" | "0")
+        }
+        _ => true,
+    }
+}
+
 fn check_datatype(x: usize, expected_dt: usize) -> bool {
-    get_datatype(x).map_or(false, |dt| dt == expected_dt)
+    match get_datatype(x) {
+        Some(dt) if dt == expected_dt => {
+            match (get_lexical_form(x), get_lexical_form(expected_dt)) {
+                (Some(lex), Some(dt_iri)) => is_lexically_valid_for_datatype(&lex, &dt_iri),
+                _ => true,
+            }
+        }
+        _ => false,
+    }
 }
 
 fn has_class(data: &TripleIndex, x: usize, class: usize, rdfs_subclass_of: usize, rdf_type: usize) -> bool {
@@ -598,6 +679,20 @@ fn get_lexical_form(x: usize) -> Option<String> {
     }
 }
 
+/// Like `get_lexical_form`, but for constraints where the SHACL spec means
+/// an actual RDF string representation (IRIs and literals), NOT a blank
+/// node's internal label -- which is an implementation detail, not a value
+/// the graph author wrote, and must never be treated as satisfying a
+/// string-shaped constraint. Used by sh:minLength/sh:maxLength: a real W3C
+/// test case (minLength-001) targets exactly this, expecting a blank node
+/// (reached via sh:targetClass) to always violate sh:minLength/maxLength.
+fn get_string_representation(x: usize) -> Option<String> {
+    match Encoder::decode_to_term(x)? {
+        Term::BlankNode(_) => None,
+        _ => get_lexical_form(x),
+    }
+}
+
 fn get_lang_tag(x: usize) -> Option<String> {
     if let Some(Term::Literal(lit)) = Encoder::decode_to_term(x) {
         lit.lang.as_ref().and_then(|l| Encoder::decode(l))
@@ -612,11 +707,84 @@ fn get_numeric_value(term_id: usize) -> Option<f64> {
     lex.trim().parse::<f64>().ok()
 }
 
-/// Compare two terms numerically (for sh:lessThan etc.). Returns None if not comparable.
+/// Parse an `xsd:dateTime` lexical form (`YYYY-MM-DDTHH:MM:SS[.fff][(Z|+HH:MM|-HH:MM)]`)
+/// into (seconds-since-a-fixed-epoch, has_explicit_timezone). The epoch choice is
+/// arbitrary (proleptic Gregorian day count is not needed here) since only
+/// relative comparisons between two parsed values are ever made.
+fn parse_datetime(lex: &str) -> Option<(i64, bool)> {
+    let lex = lex.trim();
+    let t_pos = lex.find('T')?;
+    let (date_part, rest) = lex.split_at(t_pos);
+    let rest = &rest[1..]; // skip 'T'
+
+    let date_fields: Vec<&str> = date_part.splitn(3, '-').collect();
+    // A leading '-' (BCE year) would produce an empty first field; not handled here.
+    if date_fields.len() != 3 || date_fields.iter().any(|f| f.is_empty()) {
+        return None;
+    }
+    let year: i64 = date_fields[0].parse().ok()?;
+    let month: i64 = date_fields[1].parse().ok()?;
+    let day: i64 = date_fields[2].parse().ok()?;
+
+    // Split off an explicit timezone: 'Z', or a trailing "+HH:MM"/"-HH:MM"
+    // (search from index 1 to skip a leading '-' that might belong to... time
+    // fields never start with '-', so any '+' or '-' found is the tz offset).
+    let (time_part, tz_offset_secs, has_tz) = if let Some(z_pos) = rest.find('Z') {
+        (&rest[..z_pos], 0i64, true)
+    } else if let Some(sign_pos) = rest.rfind(['+', '-']) {
+        let (t, off) = rest.split_at(sign_pos);
+        let off_fields: Vec<&str> = off[1..].splitn(2, ':').collect();
+        let off_h: i64 = off_fields.first()?.parse().ok()?;
+        let off_m: i64 = off_fields.get(1).map(|s| s.parse().ok()).flatten().unwrap_or(0);
+        let sign = if off.starts_with('-') { -1 } else { 1 };
+        (t, sign * (off_h * 3600 + off_m * 60), true)
+    } else {
+        (rest, 0i64, false)
+    };
+
+    let time_fields: Vec<&str> = time_part.splitn(3, ':').collect();
+    if time_fields.len() != 3 {
+        return None;
+    }
+    let hour: i64 = time_fields[0].parse().ok()?;
+    let minute: i64 = time_fields[1].parse().ok()?;
+    let second: f64 = time_fields[2].parse().ok()?;
+
+    // Days since an arbitrary fixed epoch via a standard civil-to-days
+    // algorithm (Howard Hinnant's `days_from_civil`), valid for the
+    // proleptic Gregorian calendar.
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = (month + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146097 + doe - 719468;
+
+    let total_secs = days * 86400 + hour * 3600 + minute * 60 + (second as i64) - tz_offset_secs;
+    Some((total_secs, has_tz))
+}
+
+/// Compare two terms numerically (for sh:lessThan etc.), falling back to
+/// `xsd:dateTime`-aware comparison when numeric parsing fails. Returns
+/// `None` if not comparable at all, OR if comparing a timezone-qualified
+/// dateTime against a timezone-less one -- per XSD's dateTime partial order,
+/// such pairs have an "indeterminate" ordering (the comparison result
+/// depends on which of the 14-hour timezone extremes is assumed), which
+/// this crate treats the same as any other non-comparable pair: a
+/// range-facet result of `None` (constraint not satisfied). This matches
+/// the real W3C SHACL test suite's expectation (minInclusive-002/003).
 fn compare_numeric(a: usize, b: usize) -> Option<std::cmp::Ordering> {
-    let av = get_numeric_value(a)?;
-    let bv = get_numeric_value(b)?;
-    av.partial_cmp(&bv)
+    if let (Some(av), Some(bv)) = (get_numeric_value(a), get_numeric_value(b)) {
+        return av.partial_cmp(&bv);
+    }
+    let (a_lex, b_lex) = (get_lexical_form(a)?, get_lexical_form(b)?);
+    let (a_secs, a_tz) = parse_datetime(&a_lex)?;
+    let (b_secs, b_tz) = parse_datetime(&b_lex)?;
+    if a_tz != b_tz {
+        return None;
+    }
+    a_secs.partial_cmp(&b_secs)
 }
 
 fn match_regex(pattern: &str, text: &str, flags: &str) -> bool {
@@ -648,11 +816,37 @@ fn get_severity(shapes: &TripleIndex, shape_node: usize, vocab: &Vocab) -> usize
     if sevs.is_empty() { vocab.sh_violation } else { sevs[0] }
 }
 
-fn get_shape_messages(shapes: &TripleIndex, shape_node: usize, vocab: &Vocab) -> Vec<String> {
+/// Returns each sh:message value on `shape_node` paired with its language tag
+/// (if any).
+fn get_shape_messages(shapes: &TripleIndex, shape_node: usize, vocab: &Vocab) -> Vec<(Option<String>, String)> {
     get_objects(shapes, shape_node, vocab.sh_message)
         .into_iter()
-        .filter_map(|m| get_lexical_form(m))
+        .filter_map(|m| get_lexical_form(m).map(|text| (get_lang_tag(m), text)))
         .collect()
+}
+
+/// Select a single message to report when a shape has zero or more sh:message
+/// values, possibly in different languages.
+///
+/// NOTE: there is no locale parameter threaded through the validator (the
+/// public API has no way for a caller to request a specific language), so this
+/// implements a fixed, spec-informed default policy rather than full RFC 4647
+/// language-range negotiation: prefer a plain (no language tag) literal first
+/// -- matching the SHACL/RDF convention that a language-less sh:message is the
+/// implementation-neutral fallback -- then prefer one tagged "en", and
+/// otherwise fall back to whichever value came first.
+fn pick_preferred_message(messages: &[(Option<String>, String)]) -> Option<String> {
+    if let Some((_, text)) = messages.iter().find(|(lang, _)| lang.is_none()) {
+        return Some(text.clone());
+    }
+    if let Some((_, text)) = messages.iter().find(|(lang, _)| {
+        lang.as_deref()
+            .map(|l| l.eq_ignore_ascii_case("en") || l.to_lowercase().starts_with("en-"))
+            .unwrap_or(false)
+    }) {
+        return Some(text.clone());
+    }
+    messages.first().map(|(_, text)| text.clone())
 }
 
 fn make_result(
@@ -672,6 +866,137 @@ fn make_result(
         source_shape: decode_to_term(shape_node),
         severity: decode_to_term(severity),
         message,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SPARQL-based constraints and targets (sh:sparql, sh:target/SPARQLTarget)
+// ---------------------------------------------------------------------------
+
+/// Render a term in the textual SPARQL syntax needed to splice it into a
+/// query string in place of `$this` (or similar substitution points).
+fn term_to_sparql_syntax(id: usize) -> String {
+    match decode_to_term(id) {
+        Term::Iri(_) => {
+            let lex = get_lexical_form(id).unwrap_or_default();
+            format!("<{}>", lex)
+        }
+        Term::BlankNode(_) => {
+            let lex = get_lexical_form(id).unwrap_or_default();
+            format!("_:{}", lex)
+        }
+        Term::Literal(lit) => {
+            let lex = get_lexical_form(id).unwrap_or_default();
+            let escaped = lex.replace('\\', "\\\\").replace('"', "\\\"");
+            if let Some(lang_id) = lit.lang {
+                let lang = Encoder::decode(&lang_id).unwrap_or_default();
+                format!("\"{}\"@{}", escaped, lang)
+            } else if let Some(dt_id) = lit.datatype {
+                let dt_lex = get_lexical_form(dt_id).unwrap_or_default();
+                format!("\"{}\"^^<{}>", escaped, dt_lex)
+            } else {
+                format!("\"{}\"", escaped)
+            }
+        }
+    }
+}
+
+/// Parse and evaluate a raw SPARQL query string against `data` using the
+/// engine in `crate::sparql`. Returns one Vec<EncodedBinding> per solution
+/// row (for ASK queries this is the underlying WHERE-pattern's solutions —
+/// non-empty means the ASK would return true).
+fn evaluate_sparql_text(
+    data: &TripleIndex,
+    query_text: &str,
+) -> Result<Vec<Vec<crate::tripleindex::EncodedBinding>>, String> {
+    let query = spargebra::Query::parse(query_text, None).map_err(|e| e.to_string())?;
+    let plan = crate::sparql::eval_query(&query, data);
+    Ok(crate::sparql::evaluate_plan(&plan, data).collect())
+}
+
+/// Evaluate a single sh:sparql constraint (a blank/IRI node carrying
+/// sh:select or sh:ask) against `this_node`, appending any violations to
+/// `results`. `$this` occurrences in the query text are textually substituted
+/// with `this_node`'s syntactic form before parsing -- this is a simple
+/// text-substitution pre-pass, not full SPARQL variable pre-binding, per the
+/// scope agreed for this implementation.
+fn validate_sparql_constraint(
+    data: &TripleIndex,
+    shapes: &TripleIndex,
+    vocab: &Vocab,
+    this_node: usize,
+    shape_node: usize,
+    sparql_node: usize,
+    default_severity: usize,
+    default_msg: &Option<String>,
+    results: &mut Vec<ValidationResult>,
+) {
+    // A sh:sparql constraint node may itself carry sh:severity / sh:message
+    // overriding the enclosing shape's.
+    let local_sevs = get_objects(shapes, sparql_node, vocab.sh_severity);
+    let severity = local_sevs.first().copied().unwrap_or(default_severity);
+    let local_messages = get_shape_messages(shapes, sparql_node, vocab);
+    let local_msg = pick_preferred_message(&local_messages).or_else(|| default_msg.clone());
+
+    let this_syntax = term_to_sparql_syntax(this_node);
+
+    if let Some(select_lit) = get_objects(shapes, sparql_node, vocab.sh_select).first().copied() {
+        let Some(query_text) = get_lexical_form(select_lit) else { return; };
+        let substituted = query_text.replace("$this", &this_syntax);
+        if let Ok(rows) = evaluate_sparql_text(data, &substituted) {
+            // Minimal SPARQLConstraintComponent semantics: any solution row is
+            // a violation. When the SELECT projects ?message/?path/?value,
+            // honour those bindings per spec; otherwise fall back to the
+            // shape's own message and the focus node as the value.
+            for row in rows {
+                let mut msg = local_msg.clone();
+                let mut path = None;
+                let mut value = Some(this_node);
+                for b in &row {
+                    let var_name = Encoder::decode(&b.var).unwrap_or_default();
+                    match var_name.trim_start_matches('?') {
+                        "message" => {
+                            if let Some(m) = get_lexical_form(b.val) {
+                                msg = Some(m);
+                            }
+                        }
+                        "path" => path = Some(b.val),
+                        "value" => value = Some(b.val),
+                        _ => {}
+                    }
+                }
+                results.push(make_result(
+                    this_node,
+                    path,
+                    value,
+                    vocab.sh_sparql_constraint_component,
+                    shape_node,
+                    severity,
+                    msg,
+                ));
+            }
+        }
+        // A malformed/unparseable query is silently skipped (documented
+        // limitation): the SHACL SPARQL constraint components spec assumes a
+        // pre-validated shapes graph, and surfacing a parse error as a Rust
+        // panic/error would abort validation for the whole report.
+    } else if let Some(ask_lit) = get_objects(shapes, sparql_node, vocab.sh_ask).first().copied() {
+        if let Some(query_text) = get_lexical_form(ask_lit) {
+            let substituted = query_text.replace("$this", &this_syntax);
+            if let Ok(rows) = evaluate_sparql_text(data, &substituted) {
+                if rows.is_empty() {
+                    results.push(make_result(
+                        this_node,
+                        None,
+                        Some(this_node),
+                        vocab.sh_sparql_constraint_component,
+                        shape_node,
+                        severity,
+                        local_msg,
+                    ));
+                }
+            }
+        }
     }
 }
 
@@ -711,13 +1036,33 @@ fn get_focus_nodes(
         }
     }
 
+    // 5. sh:target [ a sh:SPARQLTarget ; sh:select "SELECT ?this WHERE {...}" ]
+    let sparql_targets = get_objects(shapes, shape_id, vocab.sh_target);
+    for target_node in &sparql_targets {
+        let is_sparql_target = contains_triple(shapes, *target_node, vocab.rdf_type, vocab.sh_sparql_target);
+        if !is_sparql_target { continue; }
+        let Some(select_lit) = get_objects(shapes, *target_node, vocab.sh_select).first().copied() else { continue; };
+        let Some(query_text) = get_lexical_form(select_lit) else { continue; };
+        if let Ok(rows) = evaluate_sparql_text(data, &query_text) {
+            for row in rows {
+                for b in &row {
+                    let var_name = Encoder::decode(&b.var).unwrap_or_default();
+                    if var_name.trim_start_matches('?') == "this" {
+                        focus_nodes.insert(b.val);
+                    }
+                }
+            }
+        }
+    }
+
     // Implicit class target: only when shape is also declared as a class AND has no other targets
     if !is_blank_node(shape_id) {
         let has_explicit_target =
             !get_objects(shapes, shape_id, vocab.sh_target_class).is_empty()
             || !get_objects(shapes, shape_id, vocab.sh_target_node).is_empty()
             || !get_objects(shapes, shape_id, vocab.sh_target_subjects_of).is_empty()
-            || !get_objects(shapes, shape_id, vocab.sh_target_objects_of).is_empty();
+            || !get_objects(shapes, shape_id, vocab.sh_target_objects_of).is_empty()
+            || !sparql_targets.is_empty();
 
         if !has_explicit_target {
             let is_class =
@@ -870,7 +1215,7 @@ fn validate_shape(
 
     let severity = get_severity(shapes, shape_node, vocab);
     let messages = get_shape_messages(shapes, shape_node, vocab);
-    let default_msg = messages.first().cloned();
+    let default_msg = pick_preferred_message(&messages);
 
     // -----------------------------------------------------------------------
     // Node-level constraints
@@ -947,23 +1292,26 @@ fn validate_shape(
         }
     }
 
-    // sh:minLength / sh:maxLength (node-level)
-    if let Some(lex) = get_lexical_form(focus_node) {
-        let char_len = lex.chars().count();
-        for ml in get_objects(shapes, shape_node, vocab.sh_min_length) {
-            if let Some(v) = get_integer_value(ml) {
-                if (char_len as i64) < v {
-                    results.push(make_result(focus_node, None, Some(focus_node),
-                        vocab.sh_min_length_constraint_component, shape_node, severity, default_msg.clone()));
-                }
+    // sh:minLength / sh:maxLength (node-level). Per the SHACL spec, a value
+    // with no string representation at all (e.g. a blank node) is always
+    // considered to violate both constraints, not silently skipped -- a
+    // real W3C test case (minLength-001) targets exactly this: a blank node
+    // reached via sh:targetClass must produce a MinLengthConstraintComponent
+    // violation even though it has no lexical form.
+    let char_len = get_string_representation(focus_node).map(|lex| lex.chars().count() as i64);
+    for ml in get_objects(shapes, shape_node, vocab.sh_min_length) {
+        if let Some(v) = get_integer_value(ml) {
+            if char_len.map_or(true, |len| len < v) {
+                results.push(make_result(focus_node, None, Some(focus_node),
+                    vocab.sh_min_length_constraint_component, shape_node, severity, default_msg.clone()));
             }
         }
-        for ml in get_objects(shapes, shape_node, vocab.sh_max_length) {
-            if let Some(v) = get_integer_value(ml) {
-                if (char_len as i64) > v {
-                    results.push(make_result(focus_node, None, Some(focus_node),
-                        vocab.sh_max_length_constraint_component, shape_node, severity, default_msg.clone()));
-                }
+    }
+    for ml in get_objects(shapes, shape_node, vocab.sh_max_length) {
+        if let Some(v) = get_integer_value(ml) {
+            if char_len.map_or(true, |len| len > v) {
+                results.push(make_result(focus_node, None, Some(focus_node),
+                    vocab.sh_max_length_constraint_component, shape_node, severity, default_msg.clone()));
             }
         }
     }
@@ -998,16 +1346,18 @@ fn validate_shape(
         }
     }
 
-    // sh:and (node-level)
+    // sh:and (node-level) — per spec, a single AndConstraintComponent result
+    // is produced for each value node that fails to conform to *all* of the
+    // listed shapes; the individual sub-shape violations themselves are not
+    // additionally propagated into the report (verified against the W3C
+    // data-shapes suite's node/and-001 test, which expects exactly one
+    // result per non-conforming focus node).
     for and_list in get_objects(shapes, shape_node, vocab.sh_and) {
         let sub_shapes = get_rdf_list(shapes, and_list);
-        let mut sub_results = Vec::new();
-        for sub_shape in sub_shapes {
-            validate_shape(data, shapes, vocab, focus_node, sub_shape, &mut sub_results, visited);
-        }
-        if !sub_results.is_empty() {
-            // Propagate sub-results and add a top-level and-violation
-            results.extend(sub_results);
+        let conforms = sub_shapes.iter().all(|&sub| {
+            conforms_to_shape(data, shapes, vocab, focus_node, sub, visited)
+        });
+        if !conforms {
             results.push(make_result(focus_node, None, Some(focus_node),
                 vocab.sh_and_constraint_component, shape_node, severity, default_msg.clone()));
         }
@@ -1053,17 +1403,100 @@ fn validate_shape(
         }
     }
 
+    // sh:equals (node-level) — per spec these "property pair" constraint
+    // components are defined in terms of a shape's value nodes, which for a
+    // NodeShape/direct constraint is just the focus node itself.
+    for eq_prop in get_objects(shapes, shape_node, vocab.sh_equals) {
+        let other_values: HashSet<usize> = eval_path(data, shapes, focus_node, eq_prop).into_iter().collect();
+        let self_values: HashSet<usize> = std::iter::once(focus_node).collect();
+        if self_values != other_values {
+            if !other_values.contains(&focus_node) {
+                results.push(make_result(focus_node, None, Some(focus_node),
+                    vocab.sh_equals_constraint_component, shape_node, severity, default_msg.clone()));
+            }
+            for &v in &other_values {
+                if v != focus_node {
+                    results.push(make_result(focus_node, None, Some(v),
+                        vocab.sh_equals_constraint_component, shape_node, severity, default_msg.clone()));
+                }
+            }
+        }
+    }
+
+    // sh:disjoint (node-level)
+    for disj_prop in get_objects(shapes, shape_node, vocab.sh_disjoint) {
+        let other_values: HashSet<usize> = eval_path(data, shapes, focus_node, disj_prop).into_iter().collect();
+        if other_values.contains(&focus_node) {
+            results.push(make_result(focus_node, None, Some(focus_node),
+                vocab.sh_disjoint_constraint_component, shape_node, severity, default_msg.clone()));
+        }
+    }
+
+    // sh:languageIn (node-level)
+    for lang_list in get_objects(shapes, shape_node, vocab.sh_language_in) {
+        let allowed_langs: Vec<String> = get_rdf_list(shapes, lang_list)
+            .into_iter()
+            .filter_map(|l| get_lexical_form(l))
+            .map(|s| s.to_lowercase())
+            .collect();
+        if let Some(tag) = get_lang_tag(focus_node) {
+            if !allowed_langs.iter().any(|al| tag.to_lowercase().starts_with(al.as_str())) {
+                results.push(make_result(focus_node, None, Some(focus_node),
+                    vocab.sh_language_in_constraint_component, shape_node, severity, default_msg.clone()));
+            }
+        } else {
+            results.push(make_result(focus_node, None, Some(focus_node),
+                vocab.sh_language_in_constraint_component, shape_node, severity, default_msg.clone()));
+        }
+    }
+
+    // sh:sparql / SPARQLConstraintComponent (node-level). Per spec this also
+    // applies to property shapes (with $this bound to the focus node, not the
+    // value nodes), but wiring that through the sh:property loop below would
+    // require $PATH pre-binding as well; out of scope here, so sh:sparql on a
+    // PropertyShape is only honoured when that shape is also reached directly
+    // (e.g. via sh:node/sh:and/sh:or).
+    for sparql_node in get_objects(shapes, shape_node, vocab.sh_sparql) {
+        validate_sparql_constraint(data, shapes, vocab, focus_node, shape_node, sparql_node, severity, &default_msg, results);
+    }
+
     // -----------------------------------------------------------------------
     // sh:property — property shape constraints
     // -----------------------------------------------------------------------
     for ps in get_objects(shapes, shape_node, vocab.sh_property) {
+        validate_property_shape(data, shapes, vocab, focus_node, ps, results, visited);
+    }
+
+    validate_shape_closed_and_targets_tail(
+        data, shapes, vocab, focus_node, shape_node, severity, default_msg.clone(), results, visited,
+    );
+}
+
+/// The body of a single `sh:property` constraint, extracted out of
+/// `validate_shape` so it can also be invoked recursively for property
+/// shapes nested inside another property shape (`sh:property` whose object
+/// itself declares `sh:property`) -- each nested shape's own `sh:path` must
+/// be evaluated relative to the *value* reached by the outer path, not the
+/// original top-level focus node, which is exactly what passing `v` as the
+/// new `focus_node` here achieves. See the real W3C test case this fixes:
+/// `property/property-001.ttl` ("Test of sh:property at property shape").
+fn validate_property_shape(
+    data: &TripleIndex,
+    shapes: &TripleIndex,
+    vocab: &Vocab,
+    focus_node: usize,
+    ps: usize,
+    results: &mut Vec<ValidationResult>,
+    visited: &mut HashSet<(usize, usize)>,
+) {
+    {
         let paths = get_objects(shapes, ps, vocab.sh_path);
-        if paths.is_empty() { continue; }
+        if paths.is_empty() { return; }
         let path = paths[0];
         let v_nodes = eval_path(data, shapes, focus_node, path);
         let ps_severity = get_severity(shapes, ps, vocab);
         let ps_messages = get_shape_messages(shapes, ps, vocab);
-        let ps_msg = ps_messages.first().cloned();
+        let ps_msg = pick_preferred_message(&ps_messages);
 
         // sh:minCount
         for mc in get_objects(shapes, ps, vocab.sh_min_count) {
@@ -1158,12 +1591,17 @@ fn validate_shape(
             }
         }
 
-        // sh:minLength / sh:maxLength (per-value)
+        // sh:minLength / sh:maxLength (per-value). A value with no string
+        // representation (blank nodes -- see get_string_representation)
+        // always violates both, not len=0/skip.
         for ml in get_objects(shapes, ps, vocab.sh_min_length) {
             if let Some(min) = get_integer_value(ml) {
                 for &v in &v_nodes {
-                    let len = get_lexical_form(v).map(|s| s.chars().count() as i64).unwrap_or(0);
-                    if len < min {
+                    let violates = match get_string_representation(v) {
+                        Some(s) => (s.chars().count() as i64) < min,
+                        None => true,
+                    };
+                    if violates {
                         results.push(make_result(focus_node, Some(path), Some(v),
                             vocab.sh_min_length_constraint_component, ps, ps_severity, ps_msg.clone()));
                     }
@@ -1173,8 +1611,11 @@ fn validate_shape(
         for ml in get_objects(shapes, ps, vocab.sh_max_length) {
             if let Some(max) = get_integer_value(ml) {
                 for &v in &v_nodes {
-                    let len = get_lexical_form(v).map(|s| s.chars().count() as i64).unwrap_or(0);
-                    if len > max {
+                    let violates = match get_string_representation(v) {
+                        Some(s) => (s.chars().count() as i64) > max,
+                        None => true,
+                    };
+                    if violates {
                         results.push(make_result(focus_node, Some(path), Some(v),
                             vocab.sh_max_length_constraint_component, ps, ps_severity, ps_msg.clone()));
                     }
@@ -1241,24 +1682,24 @@ fn validate_shape(
             }
         }
 
-        // sh:uniqueLang (per-property)
+        // sh:uniqueLang (per-property) — per spec (and verified against the
+        // W3C data-shapes suite's property/uniqueLang-001 test), exactly one
+        // validation result is produced per *language tag* that is used by
+        // more than one value node, not one per value node beyond the first.
         let unique_lang_vals = get_objects(shapes, ps, vocab.sh_unique_lang);
         for ul in unique_lang_vals {
             if let Some(lex) = get_lexical_form(ul) {
                 if lex == "true" || lex == "1" {
-                    let mut seen_langs: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+                    let mut lang_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
                     for &v in &v_nodes {
                         if let Some(tag) = get_lang_tag(v) {
-                            let lower = tag.to_lowercase();
-                            if let Some(&prev) = seen_langs.get(&lower) {
-                                // Duplicate language tag
-                                results.push(make_result(focus_node, Some(path), Some(v),
-                                    vocab.sh_unique_lang_constraint_component, ps, ps_severity, ps_msg.clone()));
-                                // Also report the first duplicate if not already reported
-                                let _ = prev;
-                            } else {
-                                seen_langs.insert(lower, v);
-                            }
+                            *lang_counts.entry(tag.to_lowercase()).or_insert(0) += 1;
+                        }
+                    }
+                    for count in lang_counts.values() {
+                        if *count > 1 {
+                            results.push(make_result(focus_node, Some(path), None,
+                                vocab.sh_unique_lang_constraint_component, ps, ps_severity, ps_msg.clone()));
                         }
                     }
                 }
@@ -1354,16 +1795,16 @@ fn validate_shape(
         }
 
         // Logical constraints on property shape values
-        // sh:and per-value
+        // sh:and per-value — see the node-level sh:and comment above: only the
+        // single AndConstraintComponent result is reported, not the nested
+        // sub-shape violations.
         for and_list in get_objects(shapes, ps, vocab.sh_and) {
             let sub_shapes = get_rdf_list(shapes, and_list);
             for &v in &v_nodes {
-                let mut sub_results = Vec::new();
-                for &sub in &sub_shapes {
-                    validate_shape(data, shapes, vocab, v, sub, &mut sub_results, visited);
-                }
-                if !sub_results.is_empty() {
-                    results.extend(sub_results);
+                let conforms = sub_shapes.iter().all(|&sub| {
+                    conforms_to_shape(data, shapes, vocab, v, sub, visited)
+                });
+                if !conforms {
                     results.push(make_result(focus_node, Some(path), Some(v),
                         vocab.sh_and_constraint_component, ps, ps_severity, ps_msg.clone()));
                 }
@@ -1416,8 +1857,36 @@ fn validate_shape(
                 }
             }
         }
-    }
 
+        // sh:property nested inside a property shape (recursive property
+        // shapes, e.g. `ex:PersonShape sh:property [ sh:path ex:address ;
+        // sh:property ex:PersonShape-address-city ]`). Each nested property
+        // shape has its own sh:path/sh:class/etc that must be evaluated
+        // relative to each value node `v` reached by the OUTER path, not
+        // relative to the original `focus_node` -- so this recurses into
+        // `validate_shape` with `v` as the new focus and the nested shape as
+        // shape_node, exactly like the top-level `sh:property` loop does for
+        // `focus_node`/`shape_node`, letting that recursive call's own
+        // sh:property loop process the nested shape's constraints.
+        for ps_nested in get_objects(shapes, ps, vocab.sh_property) {
+            for &v in &v_nodes {
+                validate_property_shape(data, shapes, vocab, v, ps_nested, results, visited);
+            }
+        }
+    }
+}
+
+fn validate_shape_closed_and_targets_tail(
+    data: &TripleIndex,
+    shapes: &TripleIndex,
+    vocab: &Vocab,
+    focus_node: usize,
+    shape_node: usize,
+    severity: usize,
+    default_msg: Option<String>,
+    results: &mut Vec<ValidationResult>,
+    visited: &mut HashSet<(usize, usize)>,
+) {
     // sh:closed / sh:ignoredProperties (node-level)
     let closed_vals = get_objects(shapes, shape_node, vocab.sh_closed);
     for cv in closed_vals {

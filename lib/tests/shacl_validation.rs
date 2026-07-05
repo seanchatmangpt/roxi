@@ -194,6 +194,15 @@ fn test_and_or_not_logical_constraints() {
     let report_violating = Validator::validate(&data_violating, &shapes);
 
     assert!(!report_violating.conforms);
+    // AliceAnd fails sh:and: one top-level AndConstraintComponent result (per
+    // spec, the nested sub-shape violation is not additionally propagated).
+    // BobOr fails sh:or: one top-level OrConstraintComponent result.
+    // CharlieNot fails sh:not: one top-level NotConstraintComponent result.
+    // Total = 3. (This assertion was already failing before this change --
+    // verified via `git stash` -- because the old sh:and implementation
+    // incorrectly propagated nested sub-shape results in addition to the
+    // top-level AndConstraintComponent result; fixed as part of vendoring the
+    // real W3C SHACL suite, whose node/and-001 test caught the discrepancy.)
     assert_eq!(report_violating.results.len(), 3);
 }
 
@@ -450,9 +459,188 @@ fn test_severity_and_datatype() {
     let shapes = ShapesGraph::parse(shapes_str).unwrap();
     let report = Validator::validate(&data, &shapes);
 
-    assert!(!report.conforms);
+    // Per SHACL Core (1.0), sh:conforms is false whenever ANY validation
+    // result exists, regardless of severity -- sh:Info and sh:Warning count
+    // too, not just sh:Violation. This is confirmed by the real W3C
+    // data-shapes test suite (misc/severity-001.ttl/severity-002.ttl: a
+    // shape with sh:severity sh:Warning still expects sh:conforms "false").
+    // A prior version of this test asserted the opposite (conforms=true for
+    // non-Violation severities) -- that assumption was wrong and has been
+    // corrected in shacl.rs's Validator::validate accordingly.
+    assert!(!report.conforms, "conforms must be false whenever any result exists, even sh:Info severity");
     assert_eq!(report.results.len(), 1);
-    
+
     // The violation is on the property shape, so it should carry the property's sh:severity, which is sh:Info.
     assert_eq!(report.results[0].severity.to_string(), "<http://www.w3.org/ns/shacl#Info>");
+}
+
+// -----------------------------------------------------------------------
+// sh:message language-tag preference
+// -----------------------------------------------------------------------
+
+#[test]
+fn test_message_prefers_plain_literal_over_language_tagged() {
+    // Three sh:message values in different "languages" (one with no tag at
+    // all). The no-language-tag literal should be preferred.
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:PersonShape a sh:NodeShape ;
+            sh:targetClass ex:Person ;
+            sh:property [
+                sh:path ex:name ;
+                sh:minCount 1 ;
+                sh:message "Fehler: Name fehlt"@de ;
+                sh:message "Error: name missing"@en ;
+                sh:message "Generic error message" ;
+            ] .
+    "#;
+    let data_str = r#"
+        @prefix ex: <http://example.org/> .
+        ex:Alice a ex:Person .
+    "#;
+
+    let data = build_data_index(data_str);
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+    let report = Validator::validate(&data, &shapes);
+
+    assert!(!report.conforms);
+    assert_eq!(report.results.len(), 1);
+    assert_eq!(report.results[0].message.as_deref(), Some("Generic error message"));
+}
+
+#[test]
+fn test_message_prefers_english_when_no_plain_literal() {
+    // Two sh:message values, neither language-less: "en" should win over "de".
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:PersonShape a sh:NodeShape ;
+            sh:targetClass ex:Person ;
+            sh:property [
+                sh:path ex:name ;
+                sh:minCount 1 ;
+                sh:message "Fehler: Name fehlt"@de ;
+                sh:message "Error: name missing"@en ;
+            ] .
+    "#;
+    let data_str = r#"
+        @prefix ex: <http://example.org/> .
+        ex:Alice a ex:Person .
+    "#;
+
+    let data = build_data_index(data_str);
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+    let report = Validator::validate(&data, &shapes);
+
+    assert!(!report.conforms);
+    assert_eq!(report.results.len(), 1);
+    assert_eq!(report.results[0].message.as_deref(), Some("Error: name missing"));
+}
+
+// -----------------------------------------------------------------------
+// sh:sparql / SPARQLConstraintComponent
+// -----------------------------------------------------------------------
+
+#[test]
+fn test_sparql_ask_constraint() {
+    // sh:ask constraint: focus node must have an ex:age >= 18.
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:AdultShape a sh:NodeShape ;
+            sh:targetClass ex:Person ;
+            sh:sparql [
+                sh:ask "ASK { $this <http://example.org/age> ?age . FILTER(?age >= 18) }" ;
+                sh:message "Must be an adult" ;
+            ] .
+    "#;
+    let data_str = r#"
+        @prefix ex: <http://example.org/> .
+        ex:Alice a ex:Person ; ex:age 30 .
+        ex:Bob a ex:Person ; ex:age 10 .
+    "#;
+
+    let data = build_data_index(data_str);
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+    let report = Validator::validate(&data, &shapes);
+
+    assert!(!report.conforms);
+    assert_eq!(report.results.len(), 1);
+    assert!(report.results[0].focus_node.to_string().contains("Bob"));
+    assert_eq!(report.results[0].message.as_deref(), Some("Must be an adult"));
+    assert_eq!(
+        report.results[0].source_constraint_component.to_string(),
+        "<http://www.w3.org/ns/shacl#SPARQLConstraintComponent>"
+    );
+}
+
+#[test]
+fn test_sparql_select_constraint() {
+    // sh:select constraint: any solution row is a violation. Here it flags
+    // focus nodes that have two different ex:name values.
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:UniqueNameShape a sh:NodeShape ;
+            sh:targetClass ex:Person ;
+            sh:sparql [
+                sh:select "SELECT ?n1 WHERE { $this <http://example.org/name> ?n1 . $this <http://example.org/name> ?n2 . FILTER(?n1 != ?n2) }" ;
+                sh:message "Must have a single name" ;
+            ] .
+    "#;
+    let data_str = r#"
+        @prefix ex: <http://example.org/> .
+        ex:Alice a ex:Person ; ex:name "Alice" , "Al" .
+        ex:Bob a ex:Person ; ex:name "Bob" .
+    "#;
+
+    let data = build_data_index(data_str);
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+    let report = Validator::validate(&data, &shapes);
+
+    assert!(!report.conforms);
+    assert!(!report.results.is_empty());
+    assert!(report.results.iter().all(|r| r.focus_node.to_string().contains("Alice")));
+    assert!(report.results.iter().all(|r| r.message.as_deref() == Some("Must have a single name")));
+}
+
+// -----------------------------------------------------------------------
+// sh:target / sh:SPARQLTarget
+// -----------------------------------------------------------------------
+
+#[test]
+fn test_sparql_target() {
+    // Focus nodes are selected via a SPARQLTarget (people under 18), rather
+    // than sh:targetClass/sh:targetNode/etc. Each selected focus node must
+    // then have an ex:guardian.
+    let shapes_str = r#"
+        @prefix sh: <http://www.w3.org/ns/shacl#> .
+        @prefix ex: <http://example.org/> .
+
+        ex:MinorNeedsGuardianShape a sh:NodeShape ;
+            sh:target [
+                a sh:SPARQLTarget ;
+                sh:select "SELECT ?this WHERE { ?this <http://example.org/age> ?a . FILTER(?a < 18) }" ;
+            ] ;
+            sh:property [ sh:path ex:guardian ; sh:minCount 1 ] .
+    "#;
+    let data_str = r#"
+        @prefix ex: <http://example.org/> .
+        ex:Minor1 ex:age 10 .
+        ex:Adult1 ex:age 30 .
+        ex:Minor2 ex:age 5 ; ex:guardian ex:Adult1 .
+    "#;
+
+    let data = build_data_index(data_str);
+    let shapes = ShapesGraph::parse(shapes_str).unwrap();
+    let report = Validator::validate(&data, &shapes);
+
+    assert!(!report.conforms);
+    assert_eq!(report.results.len(), 1);
+    assert!(report.results[0].focus_node.to_string().contains("Minor1"));
 }

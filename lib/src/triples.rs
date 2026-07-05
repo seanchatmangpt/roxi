@@ -1,4 +1,30 @@
 use crate::Encoder;
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Mutex;
+
+// ============================================================================
+// N3 built-in support: RDF lists and quoted graphs ("formulas")
+// ============================================================================
+//
+// Design decision (TICKET-005): rather than adding new `Term` variants for
+// lists and quoted graphs, both are represented as ordinary `Term::BlankNode`
+// values whose (synthetic, process-unique) label acts as a key into a
+// process-wide side table:
+//   - `LIST_REGISTRY`:    blank-node id -> ordered member ids (Vec<usize>)
+//   - `FORMULA_REGISTRY`: blank-node id -> the quoted graph's own triples
+// This keeps `Term` a closed 3-variant enum (Iri/Literal/BlankNode), so the
+// many exhaustive `match term { Term::Iri | Term::Literal | Term::BlankNode }`
+// sites elsewhere in the crate (sparql.rs, oxrdf_adapter.rs, shacl.rs) need no
+// changes. List members may themselves be *variables* (e.g. `( ?p1 ?p2 )` used
+// as the subject of math:sum in a rule body) -- those are resolved against the
+// current row's `Binding` at builtin-evaluation time (see queryengine.rs).
+static LIST_REGISTRY: Lazy<Mutex<HashMap<usize, Vec<usize>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static FORMULA_REGISTRY: Lazy<Mutex<HashMap<usize, Vec<Triple>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static SYNTHETIC_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum VarOrTerm {
@@ -97,6 +123,35 @@ impl VarOrTerm {
         let id = Encoder::add_blank_node(label);
         let term = Encoder::decode_to_term(id).expect("Successfully decoded just-added blank node");
         VarOrTerm::Term(term)
+    }
+
+    /// Build an RDF-list term from an ordered set of members (which may be
+    /// variables or ground terms). See the module-level design note above.
+    pub fn new_list(members: Vec<VarOrTerm>) -> VarOrTerm {
+        let member_ids: Vec<usize> = members.iter().map(|m| m.to_encoded()).collect();
+        let tag = SYNTHETIC_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let id = Encoder::add_blank_node(format!("__n3list_{}", tag));
+        LIST_REGISTRY.lock().unwrap().insert(id, member_ids);
+        VarOrTerm::new_encoded_term(id)
+    }
+
+    /// Build a quoted-graph ("formula") term from its constituent triples.
+    /// See the module-level design note above.
+    pub fn new_formula(triples: Vec<Triple>) -> VarOrTerm {
+        let tag = SYNTHETIC_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let id = Encoder::add_blank_node(format!("__n3formula_{}", tag));
+        FORMULA_REGISTRY.lock().unwrap().insert(id, triples);
+        VarOrTerm::new_encoded_term(id)
+    }
+
+    /// If `id` names a synthetic list term, return its ordered member ids.
+    pub fn list_members(id: usize) -> Option<Vec<usize>> {
+        LIST_REGISTRY.lock().unwrap().get(&id).cloned()
+    }
+
+    /// If `id` names a synthetic formula (quoted graph) term, return its triples.
+    pub fn formula_triples(id: usize) -> Option<Vec<Triple>> {
+        FORMULA_REGISTRY.lock().unwrap().get(&id).cloned()
     }
 }
 

@@ -351,3 +351,111 @@ fn test_aggregate_recursive() {
     assert!(engine_correct, "engine totalCost should be 200");
     assert!(car_correct, "car totalCost should be 200");
 }
+
+/// CONFORM-012: Aggregations - Count with a TWO-variable group-by.
+///
+/// Facts model employees who each belong to a department AND a team. Grouping
+/// must be performed per unique (department, team) combination, not per
+/// department alone and not per team alone.
+///
+/// Facts:
+/// - d1/teamA: e1, e2   (count = 2)
+/// - d1/teamB: e3       (count = 1)
+/// - d2/teamA: e4       (count = 1)
+#[test]
+fn test_aggregate_count_multi_variable_group_by() {
+    let mut store = TripleStore::new();
+
+    let employees = [
+        ("http://example.org/e1", "http://example.org/d1", "http://example.org/teamA"),
+        ("http://example.org/e2", "http://example.org/d1", "http://example.org/teamA"),
+        ("http://example.org/e3", "http://example.org/d1", "http://example.org/teamB"),
+        ("http://example.org/e4", "http://example.org/d2", "http://example.org/teamA"),
+    ];
+
+    for (e, d, t) in employees.iter() {
+        store.add(Triple::from(
+            d.to_string(),
+            "http://example.org/hasEmployee".to_string(),
+            e.to_string(),
+        ));
+        store.add(Triple::from(
+            e.to_string(),
+            "http://example.org/team".to_string(),
+            t.to_string(),
+        ));
+    }
+
+    // Rule: { ?d :hasEmployee ?e . ?e :team ?t } => { ?d :teamCount count(?e) }
+    // grouped by the pair (?d, ?t). The Triple head only has 3 slots, so ?t
+    // does not appear in the derived triple directly, but if the aggregate
+    // only grouped by ?d, d1's employees (e1, e2, e3 across two teams) would
+    // collapse into a single count-of-3 row instead of two rows (2 and 1).
+    // Asserting 3 distinct rows with the correct per-group counts below
+    // proves both group_vars entries are actually used as the grouping key.
+    let rule_by_dept_team = Rule {
+        head: Triple::from(
+            "?d".to_string(),
+            "http://example.org/teamCount".to_string(),
+            "?count".to_string(),
+        ),
+        body: vec![
+            BodyLiteral {
+                negated: false,
+                pattern: Triple::from(
+                    "?d".to_string(),
+                    "http://example.org/hasEmployee".to_string(),
+                    "?e".to_string(),
+                ),
+            },
+            BodyLiteral {
+                negated: false,
+                pattern: Triple::from(
+                    "?e".to_string(),
+                    "http://example.org/team".to_string(),
+                    "?t".to_string(),
+                ),
+            },
+        ],
+    };
+
+    let agg = Aggregate {
+        function: AggregateFunction::Count,
+        source_var: "?e".to_string(),
+        target_var: "?count".to_string(),
+        group_vars: vec!["?d".to_string(), "?t".to_string()],
+    };
+
+    let res = store.add_rule_with_aggregate(rule_by_dept_team, agg);
+    assert!(res.is_ok());
+
+    let derived = store.materialize();
+
+    let count_triples: Vec<String> = derived
+        .iter()
+        .filter(|t| {
+            let s = TripleStore::decode_triple(t);
+            s.contains("teamCount")
+        })
+        .map(|t| TripleStore::decode_triple(t))
+        .collect();
+
+    // Three distinct (?d, ?t) combinations: (d1,teamA), (d1,teamB), (d2,teamA).
+    // If grouping only used ?d, we would see just 2 rows (d1 collapsed to one
+    // count of 3, d2 to one count of 1). Three rows proves both variables
+    // participate in the grouping key.
+    assert_eq!(
+        count_triples.len(),
+        3,
+        "expected 3 distinct (department, team) groups, got: {:?}",
+        count_triples
+    );
+
+    let d1_count_2 = count_triples.iter().filter(|s| s.contains("d1") && s.trim_end().ends_with(" 2")).count();
+    let d1_count_1 = count_triples.iter().filter(|s| s.contains("d1") && s.trim_end().ends_with(" 1")).count();
+    let d2_count_1 = count_triples.iter().filter(|s| s.contains("d2") && s.trim_end().ends_with(" 1")).count();
+
+    assert_eq!(d1_count_2, 1, "d1/teamA should have a count-of-2 group: {:?}", count_triples);
+    assert_eq!(d1_count_1, 1, "d1/teamB should have a count-of-1 group: {:?}", count_triples);
+    assert_eq!(d2_count_1, 1, "d2/teamA should have a count-of-1 group: {:?}", count_triples);
+}

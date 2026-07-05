@@ -85,6 +85,13 @@ Var = @{ "?" ~ ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT | "_")* }
 PrefixIdentifier = @{ ASCII_ALPHANUMERIC* }
 Prefix = { "@prefix" ~ PrefixIdentifier ~ ":" ~ "<" ~ Iri ~ ">" ~ "." }
 
+// Quantifier declarations: @forAll ?x, ?y . / @forSome ?z .
+// This engine uses one flat, process-wide variable namespace (no per-formula
+// scoping), so quantifiers are accepted syntactically and have no additional
+// runtime effect beyond confirming the declared names parse as variables.
+ForAll  = { "@forAll" ~ Var ~ ("," ~ Var)* ~ "." }
+ForSome = { "@forSome" ~ Var ~ ("," ~ Var)* ~ "." }
+
 // Local names may contain alphanumerics, underscore, hyphen, dot in the middle.
 // Local names CANNOT end with a dot (dots are triple-terminators in Notation3).
 // LocalNameEnd = any non-dot char; LocalNameBody = (non-dot | (dot ~ non-dot))* ~ non-dot
@@ -133,13 +140,27 @@ Term    = { IriRef | Prefixed }
 // Any term position: IRI, prefixed, blank node, or literal
 varOrTerm = { Term | Var | BlankNode | Literal }
 
-// Triple pattern positions
-Subject  = { IriRef | Prefixed | Var | BlankNode }
-Property = { IriRef | Prefixed | Var | RdfType }
-Object   = { IriRef | Prefixed | Var | BlankNode | Literal }
+// Quoted graph ("formula") used as a term: { TP TP ... }. May be empty.
+// Reuses TP, so a Formula can itself contain nested Lists/Formulas.
+Formula = { "{" ~ TP* ~ "}" }
 
-// Triple pattern (TP): "subject property object ."
-TP = { Subject ~ Property ~ Object ~ "."? }
+// RDF list ("collection") syntax: ( item item ... ). May be empty (rdf:nil).
+// Members reuse the same alternatives as Object, plus Formula -- needed for
+// e.g. `log:collectAllIn`'s `(?Var {quoted graph} ?List)` subject shape.
+ListItem = { IriRef | Prefixed | Var | BlankNode | Literal | Formula }
+List     = { "(" ~ ListItem* ~ ")" }
+
+// Triple pattern positions
+Subject  = { IriRef | Prefixed | Var | BlankNode | List | Formula }
+Property = { IriRef | Prefixed | Var | RdfType }
+Object   = { IriRef | Prefixed | Var | BlankNode | Literal | List | Formula }
+
+// Comma-separated object list sugar: "s p o1, o2, o3 ." desugars to one triple
+// per object, all sharing the same subject/property.
+ObjectList = { Object ~ ("," ~ Object)* }
+
+// Triple pattern (TP): "subject property object[, object]* ."
+TP = { Subject ~ Property ~ ObjectList ~ "."? }
 
 // Body literal: optionally negated TP
 BodyLiteral = { ("not" ~ "{" ~ TP ~ "}") | TP }
@@ -150,8 +171,13 @@ Body = { "{" ~ BodyLiteral+ ~ "}" }
 // Rule head: one or more TPs in braces (multi-head support)
 Head = { "{" ~ TP+ ~ "}" }
 
-// A complete rule: {body} => {head} .
-rule = { Body ~ "=>" ~ Head ~ "."? }
+// A complete rule: {body} => {head} . -- or, as backward-implication sugar,
+// {head} <= {body} . (both sides just swap textual position; semantically
+// identical to the forward form).
+forward_rule  = { Body ~ "=>" ~ Head ~ "."? }
+backward_rule = { Head ~ "<=" ~ Body ~ "."? }
+rule = { forward_rule | backward_rule }
 
-// Document: prefix declarations followed by rules
-document = { SOI ~ Prefix* ~ rule* ~ EOI }
+// Document: prefix/quantifier declarations, rules, and plain (non-rule) fact
+// triples may all be interleaved at the top level.
+document = { SOI ~ (Prefix | ForAll | ForSome | rule | TP)* ~ EOI }

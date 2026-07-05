@@ -1,0 +1,25 @@
+# Vendored from https://github.com/eyereasoner/eye/blob/master/reasoning/good-cobbler/
+# (cobbler.n3 facts + cobbler-query.n3 rule combined). Unmodified besides
+# combining the two upstream files.
+#
+# BLOCKED (see manifest.json "status": "ignored"): both the fact and the
+# rule pattern use an RDF list term, `(:good :Cobbler)` / `(:good ?Y)`. This
+# crate represents every list term as an opaque synthetic blank-node id
+# (see triples.rs's LIST_REGISTRY design note) assigned fresh at parse time;
+# `TripleIndex::query` (tripleindex.rs) only ever compares such ids for exact
+# equality, it does no structural/element-wise list-pattern unification. So
+# a rule pattern list containing a variable, like `(:good ?Y)`, can never
+# match a *different*, separately-parsed ground list term like
+# `(:good :Cobbler)` even though they're structurally compatible -- the two
+# get distinct registry ids. General list-pattern unification (as opposed to
+# the explicit list built-ins list:in/length/append/sum/concat, which
+# dereference a list's members procedurally and do work) is out of scope.
+@prefix : <https://eyereasoner.github.io/ns#>.
+
+:joe :is (:good :Cobbler).
+
+{
+    ?X :is (:good ?Y).
+} => {
+    ?X :is (:good ?Y).
+}.

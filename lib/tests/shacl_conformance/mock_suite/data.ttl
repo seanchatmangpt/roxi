@@ -1,2 +1,0 @@
-<http://example.org/User1> a <http://example.org/User> ;
-    <http://example.org/name> "Alice" .

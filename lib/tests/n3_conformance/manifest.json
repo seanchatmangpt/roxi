@@ -1,9 +1,10 @@
 {
   "provenance": {
-    "source": "https://github.com/eyereasoner/eye",
-    "description": "Vendored community-standard Notation3 (N3) and EYE reasoner conformance test cases.",
-    "last_synced": "2026-07-04"
+    "vendored_source": "https://github.com/eyereasoner/eye (reasoning/socrates, reasoning/path, reasoning/dog, reasoning/snaf, reasoning/deep-taxonomy, reasoning/nixon-diamond, reasoning/backward, reasoning/good-cobbler, reasoning/peano, reasoning/skos, reasoning/filter, reasoning/basic-monadic, reasoning/edt)",
+    "vendored_description": "The `vendored` suite reproduces EYE reasoner community test cases, lightly adapted where noted in each .n3 file's header comment. 5 cases (socrates, path, dog, snaf, deep-taxonomy [truncated from a 10000-level chain to 3 levels]) run unmodified (or near-unmodified) against this engine's supported subset and are 'active'. 6 more (nixon-diamond, backward, good-cobbler, peano, skos, filter) are vendored with `status: ignored` and a precise `blocked_reason` documenting the exact missing feature (rule-priority ordering, goal-directed/backward query evaluation, general list-term pattern unification, denial/`=> false` rule heads, `func:`/`string:lessThan` builtins). basic-monadic and edt are documentation-only stubs (no runnable _result.n3) noting why they're redundant-at-scale or need the same list-unification gap. Everything in `syntax` and hand-authored `builtins` cases is authored for this crate directly.",
+    "last_synced": "2026-07-05"
   },
+  "runner_semantics": "For every active case, the runner loads `input` via TripleStore::from, calls materialize(), decodes every inferred triple to its 'S P O.' string form, and asserts every triple listed in `expected` is present among them (a subset/entailment check, not exact equality -- both because forward-chaining fixpoints often derive more than any one hand-picked expectation, and because two of the vendored EYE cases were themselves only checked by EYE against a narrow, non-generic query).",
   "conformance_suites": [
     {
       "suite_name": "N3 Parser Syntax and Structures",
@@ -14,7 +15,7 @@
           "features": ["multi-triple-heads"],
           "input": "syntax/multi_head.n3",
           "expected": "syntax/multi_head_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "syntax_literals",
@@ -22,15 +23,15 @@
           "features": ["literals"],
           "input": "syntax/literals.n3",
           "expected": "syntax/literals_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "syntax_blank_nodes",
-          "name": "Blank nodes and nested blank node structures",
+          "name": "Blank nodes",
           "features": ["blank-nodes"],
           "input": "syntax/blank_nodes.n3",
           "expected": "syntax/blank_nodes_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "syntax_lists",
@@ -38,7 +39,7 @@
           "features": ["lists"],
           "input": "syntax/lists.n3",
           "expected": "syntax/lists_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "syntax_quantifiers",
@@ -46,7 +47,7 @@
           "features": ["quantifiers"],
           "input": "syntax/quantifiers.n3",
           "expected": "syntax/quantifiers_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "syntax_quoted_graphs",
@@ -54,7 +55,7 @@
           "features": ["quoted-graphs"],
           "input": "syntax/quoted_graphs.n3",
           "expected": "syntax/quoted_graphs_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "syntax_backward_implication",
@@ -62,7 +63,7 @@
           "features": ["backward-implication"],
           "input": "syntax/backward_implication.n3",
           "expected": "syntax/backward_implication_result.n3",
-          "status": "planned"
+          "status": "active"
         }
       ]
     },
@@ -75,7 +76,7 @@
           "features": ["builtins", "log"],
           "input": "builtins/log_equal_to.n3",
           "expected": "builtins/log_equal_to_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_log_implies",
@@ -83,7 +84,7 @@
           "features": ["builtins", "log"],
           "input": "builtins/log_implies.n3",
           "expected": "builtins/log_implies_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_math_sum",
@@ -91,7 +92,7 @@
           "features": ["builtins", "math"],
           "input": "builtins/math_sum.n3",
           "expected": "builtins/math_sum_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_math_greaterThan",
@@ -99,7 +100,7 @@
           "features": ["builtins", "math"],
           "input": "builtins/math_greater_than.n3",
           "expected": "builtins/math_greater_than_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_list_in",
@@ -107,7 +108,7 @@
           "features": ["builtins", "list"],
           "input": "builtins/list_in.n3",
           "expected": "builtins/list_in_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_list_length",
@@ -115,7 +116,7 @@
           "features": ["builtins", "list"],
           "input": "builtins/list_length.n3",
           "expected": "builtins/list_length_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_string_concat",
@@ -123,7 +124,7 @@
           "features": ["builtins", "string"],
           "input": "builtins/string_concat.n3",
           "expected": "builtins/string_concat_result.n3",
-          "status": "planned"
+          "status": "active"
         },
         {
           "id": "builtin_string_length",
@@ -131,7 +132,140 @@
           "features": ["builtins", "string"],
           "input": "builtins/string_length.n3",
           "expected": "builtins/string_length_result.n3",
-          "status": "planned"
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_collectAllIn",
+          "name": "log:collectAllIn distinct-value collection into an RDF list",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_collect_all_in.n3",
+          "expected": "builtins/log_collect_all_in_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_notIncludes",
+          "name": "log:notIncludes SNAF negation-as-failure guard",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_not_includes.n3",
+          "expected": "builtins/log_not_includes_result.n3",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "suite_name": "Vendored EYE Reasoner Cases",
+      "test_cases": [
+        {
+          "id": "vendored_socrates",
+          "name": "Socrates subclass syllogism (rdfs:subClassOf forward chaining)",
+          "features": ["vendored", "subclass", "forward-chaining"],
+          "input": "vendored/socrates.n3",
+          "expected": "vendored/socrates_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_path",
+          "name": "Symmetric-transitive path closure over a road graph (<= sugar)",
+          "features": ["vendored", "backward-implication", "transitive-closure"],
+          "input": "vendored/path.n3",
+          "expected": "vendored/path_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_dog",
+          "name": "EYE 'dog' corpus case: log:collectAllIn + n-ary math:sum + math:greaterThan",
+          "features": ["vendored", "log:collectAllIn", "math:sum", "math:greaterThan"],
+          "input": "vendored/dog.n3",
+          "expected": "vendored/dog_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_snaf",
+          "name": "EYE 'snaf' corpus case: log:notIncludes SNAF guard",
+          "features": ["vendored", "log:notIncludes"],
+          "input": "vendored/snaf.n3",
+          "expected": "vendored/snaf_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_deep_taxonomy",
+          "name": "EYE 'deep-taxonomy' corpus case (truncated to a 3-level chain): rdfs:subClassOf backward-chaining transitivity",
+          "features": ["vendored", "backward-implication", "subclass", "transitive-closure"],
+          "input": "vendored/deep_taxonomy.n3",
+          "expected": "vendored/deep_taxonomy_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_nixon_diamond",
+          "name": "EYE 'nixon-diamond' corpus case: rule-priority-dependent SNAF guard",
+          "features": ["vendored", "log:notIncludes", "rule-priority"],
+          "input": "vendored/nixon_diamond.n3",
+          "expected": "vendored/nixon_diamond_result.n3",
+          "status": "ignored",
+          "blocked_reason": "Reasoner::materialize evaluates every rule in a stratum against one shared per-iteration TripleIndex snapshot, batch-merging all newly-derived triples only after the whole iteration finishes -- there is no rule-priority/ordering concept, so Rule 1's log:notIncludes guard can never observe Rule 2's NonPacifist fact within the same iteration. Both ex:Pacifist and ex:NonPacifist get derived instead of only ex:NonPacifist. See the file's own header comment for the full explanation."
+        },
+        {
+          "id": "vendored_backward_math",
+          "name": "EYE 'backward' corpus case: goal-directed math:greaterThan proof",
+          "features": ["vendored", "backward-implication", "goal-directed"],
+          "input": "vendored/backward_math.n3",
+          "expected": "vendored/backward_math_result.n3",
+          "status": "ignored",
+          "blocked_reason": "EYE proves this goal-directed, seeding the backward rule with the concrete query '5 :moreInterestingThan 3' and working backward to check '5 math:greaterThan 3'. This engine is purely forward-chaining with no query/goal-injection mechanism, so '?X math:greaterThan ?Y' with no facts providing candidate X/Y values never binds anything."
+        },
+        {
+          "id": "vendored_good_cobbler",
+          "name": "EYE 'good-cobbler' corpus case: list-term pattern unification",
+          "features": ["vendored", "list-term-unification"],
+          "input": "vendored/good_cobbler.n3",
+          "expected": "vendored/good_cobbler_result.n3",
+          "status": "ignored",
+          "blocked_reason": "List terms are opaque synthetic blank-node ids (see triples.rs LIST_REGISTRY); TripleIndex::query only compares such ids for exact equality and does no structural/element-wise list-pattern unification, so a rule pattern like (:good ?Y) can never match a separately-parsed ground list (:good :Cobbler) even though they're structurally compatible."
+        },
+        {
+          "id": "vendored_peano",
+          "name": "EYE 'peano' corpus case: nested list-term backward-chained arithmetic",
+          "features": ["vendored", "list-term-unification", "backward-implication", "recursion"],
+          "input": "vendored/peano.n3",
+          "expected": "vendored/peano_result.n3",
+          "status": "ignored",
+          "blocked_reason": "Requires structural unification of nested list-term patterns (e.g. (?A (:s ?B)) against derived nested list values), recursively, driven backward from a query goal. This engine has neither general list-pattern unification (see vendored_good_cobbler) nor backward/goal-directed evaluation; peano needs both, compounded by recursion. Completely out of scope."
+        },
+        {
+          "id": "vendored_skos",
+          "name": "EYE 'skos' corpus case: SKOS rules with denial (=> false) heads",
+          "features": ["vendored", "denial-rules", "func-namespace"],
+          "input": "vendored/skos.n3",
+          "expected": "vendored/skos.n3",
+          "status": "ignored",
+          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/skos.n3). Beyond the ordinary forward-chaining SKOS rules this engine already handles, skos-rules.n3 requires a bodyless '=> false.' denial-rule head (Rule.head: Triple has no boolean/denial variant), ';'-shared-subject predicate-object-list syntax, and the func: RIF-builtin-function namespace (func:lang-from-PlainLiteral), none of which this ticket's scope covers."
+        },
+        {
+          "id": "vendored_filter",
+          "name": "EYE 'filter' corpus case: log:collectAllIn combined with string:lessThan",
+          "features": ["vendored", "log:collectAllIn", "string:lessThan"],
+          "input": "vendored/filter.n3",
+          "expected": "vendored/filter.n3",
+          "status": "ignored",
+          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/filter.n3). Its collectAllIn use is otherwise exactly what this ticket's log:collectAllIn implementation supports, but the embedded formula filters via string:lessThan, a string: builtin not yet implemented (only string:length/string:concat exist)."
+        },
+        {
+          "id": "vendored_basic_monadic",
+          "name": "EYE 'basic-monadic' corpus case: cyclic list-term pattern + generated benchmark data",
+          "features": ["vendored", "list-term-unification"],
+          "input": "vendored/basic_monadic.n3",
+          "expected": "vendored/basic_monadic.n3",
+          "status": "ignored",
+          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/basic_monadic.n3). Needs the same list-term structural unification good_cobbler/peano lack (here to detect a repeated variable closing an 11-element cycle list), and its fixture data is randomly-generated 10^n-scale benchmark data rather than a small fact set."
+        },
+        {
+          "id": "vendored_edt",
+          "name": "EYE 'edt' corpus case: duplicate of deep-taxonomy at unpractical scale",
+          "features": ["vendored", "subclass", "duplicate"],
+          "input": "vendored/edt.n3",
+          "expected": "vendored/edt.n3",
+          "status": "ignored",
+          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/edt.n3). Exercises the exact same rdfs:subClassOf backward rule as vendored_deep_taxonomy (which does run, truncated) over a 30002-triple, 10000-level chain -- a scale/perf duplicate, not a new feature."
         }
       ]
     }

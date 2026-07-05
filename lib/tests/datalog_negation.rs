@@ -1,6 +1,8 @@
 
-use minimal::triples::{BodyLiteral, Rule, Triple, VarOrTerm};
+use minimal::triples::{BodyLiteral, Rule, Triple, VarOrTerm, Aggregate};
+use minimal::datalog::validate_rules;
 use minimal::TripleStore;
+use std::collections::HashMap;
 
 /// TICKET-004: Test basic stratified negation.
 /// Negation-as-failure should be correctly evaluated across stratum boundaries.
@@ -458,5 +460,259 @@ fn test_long_unstratifiable_cycle_rejected() {
     // So C depends negatively on B, and B depends positively on C.
     // Thus it is unstratifiable.
     assert!(store.add_rules(vec![r1, r2, r3]).is_err());
+}
+
+/// TICKET-004: Test a 3+ layer stratification chain.
+///
+/// Predicate :C depends via negation on :B, which itself depends via negation
+/// on :A, which depends positively on the EDB predicate :hasFoo. This forms a
+/// strict chain of three strata (not a cycle), so `validate_rules` must
+/// accept it and assign each rule's head predicate a distinct, strictly
+/// increasing stratum: stratum(A) < stratum(B) < stratum(C).
+///
+/// Rules under test:
+/// { ?x :hasFoo ?y } => { ?x rdf:type :A }
+/// { ?x rdf:type :Base . not { ?x rdf:type :A } } => { ?x rdf:type :B }
+/// { ?x rdf:type :Base . not { ?x rdf:type :B } } => { ?x rdf:type :C }
+///
+/// Facts:
+/// :a rdf:type :Base . :b rdf:type :Base . :a :hasFoo :x1 .
+/// (only :a has :hasFoo, so only :a gets :A)
+///
+/// Expected derivations:
+/// :A = { :a }                      (from :hasFoo)
+/// :B = { :b }                      (:b has Base but not A)
+/// :C = { :a }                      (:a has Base but not B; :b has B so is excluded)
+#[test]
+fn test_three_layer_stratification_chain() {
+    let mut store = TripleStore::new();
+
+    // Facts
+    store.add(Triple::from(
+        "http://example.org/a".to_string(),
+        "http://example.org/type".to_string(),
+        "http://example.org/Base".to_string(),
+    ));
+    store.add(Triple::from(
+        "http://example.org/b".to_string(),
+        "http://example.org/type".to_string(),
+        "http://example.org/Base".to_string(),
+    ));
+    store.add(Triple::from(
+        "http://example.org/a".to_string(),
+        "http://example.org/hasFoo".to_string(),
+        "http://example.org/x1".to_string(),
+    ));
+
+    // Rule 1 (defines :A): { ?x :hasFoo ?y } => { ?x rdf:type :A }
+    let r1 = Rule {
+        head: Triple::from(
+            "?x".to_string(),
+            "http://example.org/type".to_string(),
+            "http://example.org/A".to_string(),
+        ),
+        body: vec![BodyLiteral {
+            negated: false,
+            pattern: Triple::from(
+                "?x".to_string(),
+                "http://example.org/hasFoo".to_string(),
+                "?y".to_string(),
+            ),
+        }],
+    };
+
+    // Rule 2 (defines :B, negates :A): { ?x rdf:type :Base . not { ?x rdf:type :A } } => { ?x rdf:type :B }
+    let r2 = Rule {
+        head: Triple::from(
+            "?x".to_string(),
+            "http://example.org/type".to_string(),
+            "http://example.org/B".to_string(),
+        ),
+        body: vec![
+            BodyLiteral {
+                negated: false,
+                pattern: Triple::from(
+                    "?x".to_string(),
+                    "http://example.org/type".to_string(),
+                    "http://example.org/Base".to_string(),
+                ),
+            },
+            BodyLiteral {
+                negated: true,
+                pattern: Triple::from(
+                    "?x".to_string(),
+                    "http://example.org/type".to_string(),
+                    "http://example.org/A".to_string(),
+                ),
+            },
+        ],
+    };
+
+    // Rule 3 (defines :C, negates :B): { ?x rdf:type :Base . not { ?x rdf:type :B } } => { ?x rdf:type :C }
+    let r3 = Rule {
+        head: Triple::from(
+            "?x".to_string(),
+            "http://example.org/type".to_string(),
+            "http://example.org/C".to_string(),
+        ),
+        body: vec![
+            BodyLiteral {
+                negated: false,
+                pattern: Triple::from(
+                    "?x".to_string(),
+                    "http://example.org/type".to_string(),
+                    "http://example.org/Base".to_string(),
+                ),
+            },
+            BodyLiteral {
+                negated: true,
+                pattern: Triple::from(
+                    "?x".to_string(),
+                    "http://example.org/type".to_string(),
+                    "http://example.org/B".to_string(),
+                ),
+            },
+        ],
+    };
+
+    let rules = vec![r1.clone(), r2.clone(), r3.clone()];
+    let aggregates: HashMap<Rule, Aggregate> = HashMap::new();
+
+    // Directly exercise validate_rules to confirm correct, distinct, strictly
+    // increasing stratification across all three layers.
+    let strata = validate_rules(&rules, &aggregates)
+        .expect("a strict negation chain A -> B -> C (no cycle) must be stratifiable");
+
+    assert_eq!(strata.len(), 3);
+    let (stratum_a, stratum_b, stratum_c) = (strata[0], strata[1], strata[2]);
+    assert!(
+        stratum_a < stratum_b,
+        "stratum(A)={} must be strictly less than stratum(B)={} (negation edge A -> B)",
+        stratum_a,
+        stratum_b
+    );
+    assert!(
+        stratum_b < stratum_c,
+        "stratum(B)={} must be strictly less than stratum(C)={} (negation edge B -> C)",
+        stratum_b,
+        stratum_c
+    );
+
+    // Also verify materialization derives the expected facts per layer.
+    let res = store.add_rules(rules);
+    assert!(res.is_ok(), "the rule set must be accepted end-to-end");
+
+    let derived = store.materialize();
+    let decoded: Vec<String> = derived.iter().map(|t| TripleStore::decode_triple(t)).collect();
+
+    let a_facts: Vec<&String> = decoded.iter().filter(|s| s.contains("http://example.org/A")).collect();
+    let b_facts: Vec<&String> = decoded.iter().filter(|s| s.contains("http://example.org/B")).collect();
+    let c_facts: Vec<&String> = decoded.iter().filter(|s| s.contains("http://example.org/C")).collect();
+
+    assert_eq!(a_facts.len(), 1, "only :a should get :A, got: {:?}", a_facts);
+    assert!(a_facts[0].contains("http://example.org/a"));
+
+    assert_eq!(b_facts.len(), 1, "only :b should get :B, got: {:?}", b_facts);
+    assert!(b_facts[0].contains("http://example.org/b"));
+
+    assert_eq!(c_facts.len(), 1, "only :a should get :C, got: {:?}", c_facts);
+    assert!(c_facts[0].contains("http://example.org/a"));
+}
+
+/// Validation cross-check against https://github.com/fogfish/datalog (an Erlang
+/// Datalog query engine). Its hardest documented semantics -- `union_2`/`union_3`
+/// (multiple distinct rules deriving the *same* head predicate act as a logical
+/// OR over their derivations) and `recursion_1`/`recursion_2`/`recursion_3`
+/// (transitive-closure fixpoint over a recursive rule referencing its own head)
+/// -- are both already exercised together, incidentally, inside
+/// `test_fixpoint_terminates_on_recursive_ruleset` above (its r1/r2 pair is a
+/// base-case + recursive-case rule pair sharing the single `reachable` head).
+/// This test isolates that same union+recursion combination as its own
+/// independently-named, minimal case, so it's auditable on its own rather than
+/// only incidentally covered inside a larger scenario.
+///
+/// Note: fogfish/datalog does not implement or test stratified negation,
+/// negation-cycle rejection, or rule safety checking at all -- those are
+/// roxi-only hard cases (see `test_unstratifiable_rules_rejected`,
+/// `test_rule_safety_check_rejects_unbound_negated_var`,
+/// `test_three_layer_stratification_chain`) with no fogfish counterpart to
+/// benchmark against. fogfish's guard-predicate (`x>2`), native cross-module
+/// join, and n-ary (beyond-triple) relation features are architecturally
+/// inapplicable to roxi's triple-based `BodyLiteral`/`Triple` model and are
+/// not portable.
+#[test]
+fn test_union_semantics_multiple_rules_same_head() {
+    let mut store = TripleStore::new();
+
+    // Facts: a chain graph a -> b -> c, plus an isolated node d.
+    for (s, o) in [("a", "b"), ("b", "c")] {
+        store.add(Triple::from(
+            format!("http://example.org/{s}"),
+            "http://example.org/edge".to_string(),
+            format!("http://example.org/{o}"),
+        ));
+    }
+
+    // Two distinct rules, DIFFERENT bodies, but the SAME head predicate
+    // (`reaches`) -- this is exactly fogfish's `union_2` pattern: the head
+    // relation is the union of whatever each rule independently derives.
+    //
+    //   reaches(x,y) :- edge(x,y).                       // base case (r1)
+    //   reaches(x,y) :- edge(x,z), reaches(z,y).          // recursive case (r2)
+    let r1 = Rule {
+        head: Triple::from(
+            "?x".to_string(),
+            "http://example.org/reaches".to_string(),
+            "?y".to_string(),
+        ),
+        body: vec![BodyLiteral {
+            negated: false,
+            pattern: Triple::from(
+                "?x".to_string(),
+                "http://example.org/edge".to_string(),
+                "?y".to_string(),
+            ),
+        }],
+    };
+    let r2 = Rule {
+        head: Triple::from(
+            "?x".to_string(),
+            "http://example.org/reaches".to_string(),
+            "?y".to_string(),
+        ),
+        body: vec![
+            BodyLiteral {
+                negated: false,
+                pattern: Triple::from(
+                    "?x".to_string(),
+                    "http://example.org/edge".to_string(),
+                    "?z".to_string(),
+                ),
+            },
+            BodyLiteral {
+                negated: false,
+                pattern: Triple::from(
+                    "?z".to_string(),
+                    "http://example.org/reaches".to_string(),
+                    "?y".to_string(),
+                ),
+            },
+        ],
+    };
+
+    let res = store.add_rules(vec![r1, r2]);
+    assert!(res.is_ok(), "union-by-shared-head rule pair must be accepted");
+
+    let derived = store.materialize();
+    let decoded: Vec<String> = derived.iter().map(|t| TripleStore::decode_triple(t)).collect();
+    let reaches: Vec<&String> = decoded.iter().filter(|s| s.contains("http://example.org/reaches")).collect();
+
+    // Transitive closure of a->b->c is exactly {a-b, b-c, a-c} -- 3 pairs,
+    // with a-c ONLY derivable via r2 (recursion), proving both rules'
+    // contributions are unioned into one relation, and that the recursive
+    // rule actually reaches its fixpoint (doesn't stop after one iteration).
+    assert_eq!(reaches.len(), 3, "expected exactly 3 reaches pairs (a-b, b-c, a-c), got: {:?}", reaches);
+    assert!(decoded.iter().any(|s| s.contains("http://example.org/a") && s.contains("http://example.org/reaches") && s.contains("http://example.org/c")),
+        "a-c must be derived transitively via the recursive rule r2, not just directly by r1");
 }
 

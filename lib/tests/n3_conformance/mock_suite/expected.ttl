@@ -1,2 +1,0 @@
-<http://example.org/Alice> <http://example.org/name> "Alice" .
-<http://example.org/Alice> <http://example.org/hasName> true .

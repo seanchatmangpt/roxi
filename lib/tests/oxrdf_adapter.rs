@@ -248,3 +248,62 @@ fn test_simple_literal_roundtrip_equality() {
 
     assert_eq!(roundtripped_o, original_o);
 }
+
+/// Round-trip identity for `xsd:decimal`, `xsd:boolean`, and `xsd:date`
+/// literals specifically -- prior adapter coverage only exercised
+/// `xsd:integer` and opaque custom datatype IRIs, leaving these three real,
+/// commonly-used XSD datatypes unverified. A lossy adapter that silently
+/// mangled a decimal's precision, a boolean's lexical form, or a date's
+/// format on the way through `oxrdf::Graph` would be a subtle, hard-to-spot
+/// data-corruption bug -- exactly the failure class this test targets.
+#[test]
+fn test_xsd_decimal_boolean_date_roundtrip_equality() {
+    use minimal::oxrdf_adapter::oxrdf_term_to_roxi_term;
+
+    let cases: &[(&str, &str)] = &[
+        ("3.14159", "http://www.w3.org/2001/XMLSchema#decimal"),
+        ("-0.001", "http://www.w3.org/2001/XMLSchema#decimal"),
+        ("true", "http://www.w3.org/2001/XMLSchema#boolean"),
+        ("false", "http://www.w3.org/2001/XMLSchema#boolean"),
+        ("2026-07-05", "http://www.w3.org/2001/XMLSchema#date"),
+    ];
+
+    for (lexical, datatype) in cases {
+        // Datatype IRIs passed to `new_literal` follow this codebase's
+        // established bracketed-IRI convention (see e.g.
+        // `queryengine.rs`'s `intern_string`/numeric-literal construction),
+        // matching what `oxrdf_term_to_roxi_term` itself produces.
+        let bracketed_datatype = format!("<{}>", datatype);
+        let original = VarOrTerm::new_literal(lexical.to_string(), Some(bracketed_datatype), None);
+        let original_term = match &original {
+            VarOrTerm::Term(t) => t.clone(),
+            _ => panic!("Expected term"),
+        };
+
+        let mut index = TripleIndex::new();
+        let s = VarOrTerm::convert("http://example.org/s".to_string());
+        let p = VarOrTerm::convert("http://example.org/p".to_string());
+        index.add(Triple { s, p, o: original.clone(), g: None });
+
+        let graph = triple_index_to_oxrdf_graph(&index);
+        assert_eq!(graph.len(), 1, "expected exactly one triple for {} ({})", lexical, datatype);
+
+        let oxrdf_triple = graph.iter().next().unwrap();
+        let ox_term = Term::from(oxrdf_triple.object.clone());
+
+        // The oxrdf side must carry the datatype through untouched.
+        if let Term::Literal(lit) = &ox_term {
+            assert_eq!(lit.value(), *lexical, "lexical form must survive the roxi->oxrdf conversion for {}", datatype);
+            assert_eq!(lit.datatype().as_str(), *datatype, "datatype IRI must survive the roxi->oxrdf conversion for {}", lexical);
+        } else {
+            panic!("expected a Literal term for {} ({}), got {:?}", lexical, datatype, ox_term);
+        }
+
+        // Full round-trip: oxrdf -> roxi must reproduce the original term exactly.
+        let roundtripped_term = oxrdf_term_to_roxi_term(&ox_term);
+        assert_eq!(
+            original_term, roundtripped_term,
+            "round-trip (roxi->oxrdf->roxi) must preserve {} ({}) exactly", lexical, datatype
+        );
+    }
+}
