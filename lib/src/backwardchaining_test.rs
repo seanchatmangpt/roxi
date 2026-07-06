@@ -112,3 +112,31 @@ use crate::{BackwardChainer, Encoder, Syntax, Triple, TripleStore, VarOrTerm};
             }
         }
     }
+
+    #[test]
+    fn test_solve_peano_variable_goal() {
+        let rules = std::fs::read_to_string("tests/n3_conformance/vendored/peano.n3")
+            .expect("peano.n3 readable");
+        let store = TripleStore::from(&rules);
+
+        // Parse the goal pattern `(?X (:s 0)) :add (:s (:s 0))` through the
+        // real N3 parser (as a rule with a trivial `true` body) so its
+        // terms are encoded exactly as the vendored peano.n3 rules encode
+        // theirs, then pull the parsed head back out as the goal triple.
+        let goal_src = "@prefix : <http://example.org/#>.\n{(?X (:s 0)) :add (:s (:s 0))} <= true.";
+        let goal_store = TripleStore::from(goal_src);
+        let goal = goal_store.rules_index.rules[0].head.clone();
+
+        let rows = store.solve(&goal);
+        assert_eq!(rows.len(), 1, "expected exactly one binding row, got {:?}", rows);
+
+        let x_id = VarOrTerm::new_var("X".to_string()).to_encoded();
+        let bound = rows[0].get(&x_id).expect("?X bound").clone();
+        assert_eq!(bound.len(), 1);
+
+        // Expected value: parse `(:s 0)` the same way and compare encodings.
+        let expected_src = "@prefix : <http://example.org/#>.\n{?Dummy :dummy (:s 0)} <= true.";
+        let expected_store = TripleStore::from(expected_src);
+        let expected = expected_store.rules_index.rules[0].head.o.clone();
+        assert_eq!(bound[0], expected.to_encoded());
+    }

@@ -1,3 +1,3 @@
 @prefix : <http://example.org/#>.
 
-5 :moreInterestingThan 3 .
+:x :hasLocalName "SomeName" .

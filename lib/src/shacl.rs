@@ -496,15 +496,15 @@ fn is_shape_deactivated(shapes: &TripleIndex, shape_node: usize, vocab: &Vocab) 
     false
 }
 
-fn is_blank_node(id: usize) -> bool {
+pub(crate) fn is_blank_node(id: usize) -> bool {
     matches!(Encoder::decode_to_term(id), Some(Term::BlankNode(_)))
 }
 
-fn is_iri(id: usize) -> bool {
+pub(crate) fn is_iri(id: usize) -> bool {
     matches!(Encoder::decode_to_term(id), Some(Term::Iri(_)))
 }
 
-fn is_literal(id: usize) -> bool {
+pub(crate) fn is_literal(id: usize) -> bool {
     matches!(Encoder::decode_to_term(id), Some(Term::Literal(_)))
 }
 
@@ -517,7 +517,7 @@ fn contains_triple(index: &TripleIndex, s: usize, p: usize, o: usize) -> bool {
     false
 }
 
-fn get_objects(index: &TripleIndex, subject: usize, predicate: usize) -> Vec<usize> {
+pub(crate) fn get_objects(index: &TripleIndex, subject: usize, predicate: usize) -> Vec<usize> {
     let mut result = Vec::new();
     if let Some(preds) = index.spo.get(&subject) {
         if let Some(objs) = preds.get(&predicate) {
@@ -571,7 +571,7 @@ fn get_rdf_list(shapes: &TripleIndex, list_node: usize) -> Vec<usize> {
     result
 }
 
-fn get_datatype(term_id: usize) -> Option<usize> {
+pub(crate) fn get_datatype(term_id: usize) -> Option<usize> {
     let term = Encoder::decode_to_term(term_id)?;
     if let Term::Literal(lit) = term {
         if let Some(dt) = lit.datatype {
@@ -594,7 +594,7 @@ fn get_datatype(term_id: usize) -> Option<usize> {
 /// lexically validated -- a literal declared with such a datatype conforms
 /// based on the declared datatype IRI alone, per spec's fallback rule for
 /// unrecognized datatypes.
-fn is_lexically_valid_for_datatype(lexical: &str, datatype_iri: &str) -> bool {
+pub(crate) fn is_lexically_valid_for_datatype(lexical: &str, datatype_iri: &str) -> bool {
     let t = lexical.trim();
     match datatype_iri {
         "http://www.w3.org/2001/XMLSchema#integer"
@@ -660,7 +660,7 @@ fn has_class(data: &TripleIndex, x: usize, class: usize, rdfs_subclass_of: usize
     false
 }
 
-fn get_lexical_form(x: usize) -> Option<String> {
+pub(crate) fn get_lexical_form(x: usize) -> Option<String> {
     let term = Encoder::decode_to_term(x)?;
     match term {
         Term::Iri(_) => {
@@ -693,7 +693,7 @@ fn get_string_representation(x: usize) -> Option<String> {
     }
 }
 
-fn get_lang_tag(x: usize) -> Option<String> {
+pub(crate) fn get_lang_tag(x: usize) -> Option<String> {
     if let Some(Term::Literal(lit)) = Encoder::decode_to_term(x) {
         lit.lang.as_ref().and_then(|l| Encoder::decode(l))
     } else {
@@ -774,7 +774,7 @@ fn parse_datetime(lex: &str) -> Option<(i64, bool)> {
 /// this crate treats the same as any other non-comparable pair: a
 /// range-facet result of `None` (constraint not satisfied). This matches
 /// the real W3C SHACL test suite's expectation (minInclusive-002/003).
-fn compare_numeric(a: usize, b: usize) -> Option<std::cmp::Ordering> {
+pub(crate) fn compare_numeric(a: usize, b: usize) -> Option<std::cmp::Ordering> {
     if let (Some(av), Some(bv)) = (get_numeric_value(a), get_numeric_value(b)) {
         return av.partial_cmp(&bv);
     }
@@ -787,7 +787,7 @@ fn compare_numeric(a: usize, b: usize) -> Option<std::cmp::Ordering> {
     a_secs.partial_cmp(&b_secs)
 }
 
-fn match_regex(pattern: &str, text: &str, flags: &str) -> bool {
+pub(crate) fn match_regex(pattern: &str, text: &str, flags: &str) -> bool {
     let mut builder = regex::RegexBuilder::new(pattern);
     for c in flags.chars() {
         match c {
@@ -802,12 +802,12 @@ fn match_regex(pattern: &str, text: &str, flags: &str) -> bool {
 }
 
 /// Parse an xsd:integer literal as i64 (allowing negative values).
-fn get_integer_value(term_id: usize) -> Option<i64> {
+pub(crate) fn get_integer_value(term_id: usize) -> Option<i64> {
     let lex = get_lexical_form(term_id)?;
     lex.trim().parse::<i64>().ok()
 }
 
-fn decode_to_term(id: usize) -> Term {
+pub(crate) fn decode_to_term(id: usize) -> Term {
     Encoder::decode_to_term(id).unwrap_or_else(|| Term::Iri(TermImpl { iri: id }))
 }
 
@@ -914,12 +914,36 @@ fn evaluate_sparql_text(
     Ok(crate::sparql::evaluate_plan(&plan, data).collect())
 }
 
+/// Rewrite `$this` occurrences in a SHACL SPARQL constraint's query text
+/// into a real, valid pre-bound SPARQL variable: replace every `$this`
+/// with `?this`, then inject `BIND(<iri> AS ?this)` immediately after the
+/// query's first `{` (the opening of its WHERE block).
+///
+/// This replaces an earlier approach that textually substituted `$this`
+/// with the focus node's raw syntactic form (e.g. `<http://example.org/x>`)
+/// everywhere in the query text -- which breaks for the single most common
+/// real-world SHACL SPARQL idiom, `SELECT $this WHERE { ... }`: substituting
+/// `$this` there produces `SELECT <http://example.org/x> WHERE { ... }`,
+/// which is not valid SPARQL (a bare IRI is not a legal SELECT projection),
+/// so the query failed to parse and the caller's `if let Ok(rows) = ...`
+/// silently swallowed the error -- reporting zero violations instead of
+/// evaluating the constraint at all. Found via SHACL sh:sparql interaction
+/// testing (a real bug in roxi's own code, not a delegated third-party
+/// crate).
+fn substitute_this_as_bound_variable(query_text: &str, this_syntax: &str) -> String {
+    let with_var = query_text.replace("$this", "?this");
+    if let Some(brace_pos) = with_var.find('{') {
+        let (before, after) = with_var.split_at(brace_pos + 1);
+        format!("{before} BIND({this_syntax} AS ?this) {after}")
+    } else {
+        with_var
+    }
+}
+
 /// Evaluate a single sh:sparql constraint (a blank/IRI node carrying
 /// sh:select or sh:ask) against `this_node`, appending any violations to
-/// `results`. `$this` occurrences in the query text are textually substituted
-/// with `this_node`'s syntactic form before parsing -- this is a simple
-/// text-substitution pre-pass, not full SPARQL variable pre-binding, per the
-/// scope agreed for this implementation.
+/// `results`. See `substitute_this_as_bound_variable` for how `$this` is
+/// handled.
 fn validate_sparql_constraint(
     data: &TripleIndex,
     shapes: &TripleIndex,
@@ -942,7 +966,7 @@ fn validate_sparql_constraint(
 
     if let Some(select_lit) = get_objects(shapes, sparql_node, vocab.sh_select).first().copied() {
         let Some(query_text) = get_lexical_form(select_lit) else { return; };
-        let substituted = query_text.replace("$this", &this_syntax);
+        let substituted = substitute_this_as_bound_variable(&query_text, &this_syntax);
         if let Ok(rows) = evaluate_sparql_text(data, &substituted) {
             // Minimal SPARQLConstraintComponent semantics: any solution row is
             // a violation. When the SELECT projects ?message/?path/?value,
@@ -982,7 +1006,7 @@ fn validate_sparql_constraint(
         // panic/error would abort validation for the whole report.
     } else if let Some(ask_lit) = get_objects(shapes, sparql_node, vocab.sh_ask).first().copied() {
         if let Some(query_text) = get_lexical_form(ask_lit) {
-            let substituted = query_text.replace("$this", &this_syntax);
+            let substituted = substitute_this_as_bound_variable(&query_text, &this_syntax);
             if let Ok(rows) = evaluate_sparql_text(data, &substituted) {
                 if rows.is_empty() {
                     results.push(make_result(

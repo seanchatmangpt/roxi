@@ -89,6 +89,17 @@ pub enum PlanNode {
         right: Box<Self>,
     },
     Done,
+    /// The empty-BGP identity: yields exactly one solution with zero
+    /// bindings (SPARQL algebra's "unit table"), so joining it with
+    /// anything is a no-op. Distinct from `Done` (which yields ZERO
+    /// solutions, i.e. "never matches") -- an empty `GraphPattern::Bgp`
+    /// (e.g. the segment before a leading `BIND` in `{ BIND(...) ?s ?p
+    /// ?o }`) must behave as "always matches trivially," not "never
+    /// matches." Using `Done` here previously caused any query with a
+    /// leading BIND (or other empty-BGP-adjacent construct) to silently
+    /// produce zero rows -- found via the SHACL sh:sparql `$this`
+    /// pre-binding fix, which injects exactly this kind of leading BIND.
+    Unit,
 }
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct PlanAggregation {
@@ -120,7 +131,7 @@ fn extract_query_plan(graph_pattern: &GraphPattern) -> PlanNode {
                 ),
             })
             .reduce(new_join)
-            .unwrap(),
+            .unwrap_or(PlanNode::Unit),
         GraphPattern::Join { left, right } => PlanNode::Join {
             left: Box::new(extract_query_plan(left)),
             right: Box::new(extract_query_plan(right)),
@@ -292,6 +303,18 @@ fn extract_expression(expression: &Expression) -> PlanExpression {
             let datatype = format!("<{}>", value.datatype().as_str());
             let lang = value.language().map(|l| l.to_string());
             let id = Encoder::add_literal(val, Some(datatype), lang);
+            let term = Encoder::decode_to_term(id).unwrap();
+            PlanExpression::Constant(term)
+        }
+        // A bare IRI constant (e.g. the RHS of `BIND(<iri> AS ?x)`) had no
+        // handling here and silently fell through to the `_` catch-all
+        // below, compiling to `PlanExpression::Done` -- which made ANY
+        // `BIND(<iri> AS ?var)` a no-op that never actually bound the
+        // variable, breaking every downstream use of that variable. Found
+        // via the SHACL sh:sparql `$this` pre-binding fix, which relies on
+        // exactly this construct.
+        Expression::NamedNode(iri) => {
+            let id = Encoder::add(format!("<{}>", iri.as_str()));
             let term = Encoder::decode_to_term(id).unwrap();
             PlanExpression::Constant(term)
         }
@@ -670,6 +693,7 @@ pub fn evaluate_plan<'a>(
             Box::new(remaining.into_iter())
         }
         PlanNode::Done => Box::new(empty()),
+        PlanNode::Unit => Box::new(std::iter::once(Vec::new())),
     }
 }
 fn encode_term(term: EncodedTerm) -> usize {
@@ -931,7 +955,7 @@ fn eval_expression<'a>(
                                 let val_str = Encoder::decode(&lit.value).unwrap_or_default();
                                 if let Some(dt_str) = dt {
                                     if dt_str == "<http://www.w3.org/2001/XMLSchema#integer>" {
-                                        if let Ok(i) = val_str.parse::<usize>() {
+                                        if let Ok(i) = val_str.parse::<i64>() {
                                             return Some(EncodedTerm::IntegerLiteral(i));
                                         }
                                     } else if dt_str == "<http://www.w3.org/2001/XMLSchema#boolean>" {
@@ -955,7 +979,7 @@ fn eval_expression<'a>(
                     let val_str = Encoder::decode(&lit.value).unwrap_or_default();
                     if let Some(dt_str) = dt {
                         if dt_str == "<http://www.w3.org/2001/XMLSchema#integer>" {
-                            if let Ok(i) = val_str.parse::<usize>() {
+                            if let Ok(i) = val_str.parse::<i64>() {
                                 EncodedTerm::IntegerLiteral(i)
                             } else {
                                 EncodedTerm::StringLiteral(val_str)
@@ -1032,7 +1056,13 @@ fn to_bool(term: &EncodedTerm) -> Option<bool> {
 pub enum EncodedTerm {
     NamedNode { iri_id: usize },
     StringLiteral(String),
-    IntegerLiteral(usize),
+    // Signed: xsd:integer literals (and therefore SPARQL FILTER numeric
+    // comparisons) must support negative values. This was previously
+    // `usize`, silently failing `val_str.parse::<i64>()` for any
+    // negative literal (e.g. "-5") and falling back to StringLiteral,
+    // which made numeric FILTER comparisons against negative integers
+    // never match (found via SHACL sh:sparql interaction testing).
+    IntegerLiteral(i64),
     BooleanLiteral(bool),
 }
 impl From<bool> for EncodedTerm {
@@ -1045,8 +1075,8 @@ impl From<String> for EncodedTerm {
         Self::StringLiteral(value)
     }
 }
-impl From<usize> for EncodedTerm {
-    fn from(value: usize) -> Self {
+impl From<i64> for EncodedTerm {
+    fn from(value: i64) -> Self {
         Self::IntegerLiteral(value)
     }
 }

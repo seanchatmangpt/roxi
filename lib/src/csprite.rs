@@ -1,13 +1,13 @@
 use crate::{
-    BackwardChainer, Encoder, Reasoner, Rule, RuleIndex, Triple, TripleIndex, TripleStore,
+    BackwardChainer, Binding, Encoder, QueryEngine, Reasoner, Rule, RuleIndex, SimpleQueryEngine,
+    Triple, TripleIndex, TripleStore, VarOrTerm,
 };
 use log::{info, trace, warn}; // Use log crate when building application
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::rc::Rc;
 
-use crate::imars_window::{ImarsWindow, WindowConsumer};
-use crate::reasoner::CSpriteReasoner;
+use crate::imars_window::ImarsWindow;
 use std::cell::RefCell;
 
 
@@ -286,6 +286,158 @@ impl CSprite {
         new_rules
     }
 }
+pub struct CSpriteReasoner;
+
+impl CSpriteReasoner {
+    pub fn materialize(
+        &mut self,
+        new_data: &Vec<(i32, Rc<Triple>)>,
+        triple_index: &mut TripleIndex,
+        rules_index: &RuleIndex,
+        window: &mut ImarsWindow<Triple>,
+    ) -> Vec<(i32, Rc<Triple>)> {
+        let mut inferred = Vec::new();
+        let mut counter = 0;
+        let mut pending_changes = Vec::new();
+        new_data
+            .into_iter()
+            .for_each(|i| pending_changes.push(i.clone()));
+        while counter < pending_changes.len() {
+            let (_ts, process_quad) = pending_changes.get(counter).unwrap();
+            //trace!("Processing: {:?}",decode_triple(process_quad));
+            //let matching_rules = self.find_matching_rules(process_quad);
+            let matching_rules = rules_index.find_match(process_quad);
+            trace!("Found Rules: {:?}", matching_rules);
+            let mut new_triples = Vec::new();
+
+            for rule in matching_rules {
+                if let Some(mut temp_bindings) =
+                    SimpleQueryEngine::query(triple_index, &rule.body, None)
+                {
+                    let new_heads =
+                        Reasoner::substitute_head_with_bindings(&rule.head, &temp_bindings);
+                    let reconstructed = CSpriteReasoner::reconstruct_triples_from_bindings(
+                        &mut temp_bindings,
+                        rule,
+                    );
+                    for i in 0..new_heads.len() {
+                        let new_head = new_heads.get(i).unwrap().clone();
+                        //println!("Inferred head: {:?}", Self::decode_triple(&new_head,encoder));
+                        //compute time stamp
+                        let triples = reconstructed.get(i).unwrap();
+                        //println!("Triples: {:?}", triples);
+                        // let min_ts: Vec<Option<i32>> =triples.iter().map(|t|window.get_time_stamp(Rc::new(t.clone()))).collect();
+                        // let min_ts =triples.iter().map(|t|window.get_time_stamp(Rc::new(t.clone()))).filter(|t|t.is_some()).min().unwrap().unwrap();//todo update to reference only
+                        let items: Vec<(i32, &Triple)> = triples
+                            .iter()
+                            .map(|t| (window.get_time_stamp(Rc::new(t.clone())), t))
+                            .filter(|(ts, _t)| ts.is_some())
+                            .map(|(ts, t)| (ts.unwrap(), t))
+                            .collect();
+                        if items.is_empty() {
+                            continue; // skip this head — no timestamps available
+                        }
+                        let (min_ts, min_triple) =
+                            items.iter().fold(
+                                items[0],
+                                |acc, &item| {
+                                    if acc.0 <= item.0 {
+                                        acc
+                                    } else {
+                                        item
+                                    }
+                                },
+                            );
+                        new_triples.push((min_ts.clone(), new_head.clone(), min_triple.clone()));
+                    }
+                }
+            }
+            for (ts, new_triple, min_triple) in new_triples {
+                if !triple_index.contains(&new_triple) {
+                    //trace!("Inferred: {:?}",self.decode_triple(&triple));
+                    let triple_ref = Rc::new(new_triple);
+                    inferred.push((ts, triple_ref.clone()));
+                    //add to maintanance program
+
+                    // window.add_without_update(triple_ref.clone(),ts);
+                    window.add_after(triple_ref.clone(), Rc::new(min_triple.clone()), ts);
+                    pending_changes.push((ts, triple_ref.clone()));
+
+                    triple_index.add_ref(triple_ref);
+                }
+            }
+            counter += 1;
+        }
+
+        inferred
+    }
+    #[allow(dead_code)]
+    fn decode_triple(triple: &Triple) -> String {
+        let mut res = String::new();
+
+        let decoded_s = Encoder::decode(&triple.s.to_encoded()).unwrap();
+        let decoded_p = Encoder::decode(&triple.p.to_encoded()).unwrap();
+        let decoded_o = Encoder::decode(&triple.o.to_encoded()).unwrap();
+
+        write!(&mut res, "{} {} {}.\n", decoded_s, decoded_p, decoded_o).unwrap();
+
+        res
+    }
+    pub(crate) fn reconstruct_triples_from_bindings(
+        result_bindings: &mut Binding,
+        rule: &Rule,
+    ) -> Vec<Vec<Triple>> {
+        let mut counter = 0;
+        let mut all_triples = Vec::new();
+        while counter < result_bindings.len() {
+            let mut triples = Vec::new();
+            for body_lit in rule.body.iter() {
+                let triple = &body_lit.pattern;
+                let mut s;
+                let mut p;
+                let mut o;
+                if triple.s.is_var() {
+                    s = VarOrTerm::new_encoded_term(
+                        *result_bindings
+                            .get(&triple.s.as_var().name)
+                            .unwrap()
+                            .get(counter)
+                            .unwrap(),
+                    );
+                } else {
+                    s = triple.s.clone();
+                }
+                if triple.p.is_var() {
+                    p = VarOrTerm::new_encoded_term(
+                        *result_bindings
+                            .get(&triple.p.as_var().name)
+                            .unwrap()
+                            .get(counter)
+                            .unwrap(),
+                    );
+                } else {
+                    p = triple.p.clone();
+                }
+                if triple.o.is_var() {
+                    o = VarOrTerm::new_encoded_term(
+                        *result_bindings
+                            .get(&triple.o.as_var().name)
+                            .unwrap()
+                            .get(counter)
+                            .unwrap(),
+                    );
+                } else {
+                    o = triple.o.clone();
+                }
+                triples.push(Triple { s, p, o, g: None });
+            }
+            counter += 1;
+            all_triples.push(triples);
+        }
+        all_triples
+    }
+}
+
 #[cfg(test)]
 #[path = "csprite_test.rs"]
 mod csprite_test;

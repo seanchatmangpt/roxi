@@ -3,19 +3,25 @@
 # (this engine has no query/goal-extraction mechanism -- see main.rs, this
 # suite only ever runs full materialize() and checks derived facts).
 #
-# BLOCKED (see nixon_diamond_result.n3 / manifest.json "status": "ignored"):
-# this is a *rule-priority* example -- Rule 2 (Republicans are NonPacifist)
-# is supposed to fire before Rule 1 (Quakers are Pacifist, guarded by
+# This is a *rule-priority* example -- Rule 2 (Republicans are NonPacifist)
+# must be fully evaluated before Rule 1 (Quakers are Pacifist, guarded by
 # `log:notIncludes { ?x a ex:NonPacifist }`) so the SNAF guard can see the
-# NonPacifist fact and block Rule 1. This crate's `Reasoner::materialize`
-# evaluates every rule in a stratum against one shared per-iteration
-# TripleIndex snapshot and only merges all rules' newly-derived triples into
-# the store in a single batch *after* the whole iteration finishes (see the
-# `new_triples_in_loop` accumulator in reasoner.rs) -- there is no rule
-# priority/ordering concept, so a `log:notIncludes` guard in one rule can
-# never observe a fact asserted by another rule of the same stratum within
-# the same fixpoint iteration. Both `ex:Pacifist` and `ex:NonPacifist` get
-# derived simultaneously instead of only `ex:NonPacifist`.
+# NonPacifist fact and block Rule 1. Closed two ways, both in `datalog.rs`/
+# `reasoner.rs`:
+# 1. `datalog::validate_rules`'s stratification analysis now looks *inside*
+#    a `log:notIncludes` literal's quoted-formula argument (the same way
+#    `collect_formula_vars` already did for `log:implies`) and adds a
+#    genuine negative dependency edge on whatever relation that inner
+#    pattern names -- here, Rule 1 (deriving ex:Pacifist) is forced into a
+#    stratum strictly greater than Rule 2 (deriving ex:NonPacifist), so
+#    Rule 2's stratum runs to a full fixpoint before Rule 1's stratum
+#    starts at all.
+# 2. `Reasoner::materialize`'s fixpoint also now applies each rule's
+#    derivations to the live `TripleIndex` immediately (in declaration
+#    order) rather than batching until the whole iteration finishes, so
+#    even within one stratum/iteration a later rule can observe an
+#    earlier rule's same-iteration output.
+# Only `ex:NonPacifist` is derived, matching upstream EYE.
 @prefix log: <http://www.w3.org/2000/10/swap/log#> .
 @prefix ex:  <http://example.org/nixon#> .
 

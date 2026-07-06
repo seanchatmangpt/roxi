@@ -1,7 +1,9 @@
 extern crate core;
 pub mod backwardchaining;
 pub mod bindings;
+pub mod builtins;
 pub mod csprite;
+pub mod decode;
 pub mod dred;
 pub mod encoding;
 pub mod imars_reasoner;
@@ -18,11 +20,15 @@ pub mod sparql;
 pub mod time_window;
 pub mod tripleindex;
 pub mod oxrdf_adapter;
+pub mod registry;
+pub mod rule;
+pub mod term;
 pub mod triples;
 pub mod utils;
 pub mod aggregation;
 pub mod shacl;
 pub mod shex;
+pub mod shex_native;
 pub mod datalog;
 
 extern crate pest;
@@ -158,80 +164,69 @@ impl TripleStore {
             .materialize(&mut self.triple_index, &self.rules, &self.strata, &self.aggregates)
     }
 
+    /// Check every denial/consistency-check rule (`{ body } => false.`,
+    /// e.g. SKOS's disjointness constraints -- see `Rule::is_denial`)
+    /// against the current facts, returning a human-readable description of
+    /// each one whose body matches (a genuine constraint violation). Call
+    /// this *after* `materialize()` has reached a fixpoint, so a violation
+    /// that only becomes visible through a derived (not just asserted)
+    /// fact is still caught -- `materialize()` itself never asserts
+    /// anything for a denial rule (see `Reasoner::materialize`'s `is_denial`
+    /// skip), it only derives the ordinary facts the check here then reads.
+    pub fn check_denials(&self) -> Vec<String> {
+        self.rules
+            .iter()
+            .filter(|r| r.is_denial())
+            .filter_map(|r| {
+                let bindings = SimpleQueryEngine::query(&self.triple_index, &r.body, None)?;
+                if bindings.len() == 0 {
+                    return None;
+                }
+                let body_desc: String = r
+                    .body
+                    .iter()
+                    .map(|lit| {
+                        let s = Self::decode_triples(&[lit.pattern.clone()]);
+                        if lit.negated {
+                            format!("not {{{}}}", s.trim())
+                        } else {
+                            s
+                        }
+                    })
+                    .collect();
+                Some(format!("DENIED: {{{}}} => false.", body_desc.trim()))
+            })
+            .collect()
+    }
+
+    /// Prove a fully ground goal triple (e.g. `5 :moreInterestingThan 3`)
+    /// goal-directed against this store's rules + facts -- unlike
+    /// `materialize()`, which forward-derives everything a stratum
+    /// implies, this seeds a concrete query and works backward, so it can
+    /// answer things forward-chaining alone cannot (e.g. `<=` rules with
+    /// no ground facts to iterate candidate variable values over). See
+    /// `backwardchaining::BackwardChainer::prove`.
+    pub fn prove(&self, goal: &Triple) -> bool {
+        // Thin ground-goal convenience wrapper around `solve`: a ground
+        // goal is proved iff `solve` returns at least one binding row (for
+        // a fully ground goal that row is always the empty row, since
+        // there are no variables left to bind).
+        !self.solve(goal).is_empty()
+    }
+
+    /// Full SLD-style resolution: prove `goal` (which may contain
+    /// variables anywhere, including nested inside list terms) against
+    /// this store's rules + facts, goal-directed, and return every
+    /// binding row that satisfies it. See
+    /// `backwardchaining::BackwardChainer::solve`.
+    pub fn solve(&self, goal: &Triple) -> Vec<crate::Binding> {
+        crate::backwardchaining::BackwardChainer::solve(&self.triple_index, &self.rules_index, goal)
+    }
+
     //Backward chaining
 
     ////
 
-    pub fn decode_rule(rule: &Rule) -> String {
-        let mut res = String::new();
-        let decoded_head = Self::decode_triples(&[rule.head.clone()]);
-        let decoded_body: String = rule
-            .body
-            .iter()
-            .map(|lit| {
-                let s = Self::decode_triples(&[lit.pattern.clone()]);
-                if lit.negated {
-                    format!("not {{{}}}", s.trim())
-                } else {
-                    s
-                }
-            })
-            .collect();
-        write!(&mut res, "{{{}}}=>{{{}}}.\n", decoded_body, decoded_head).unwrap();
-        res
-    }
-    pub fn decode_rules(rules: &[Rule]) -> String {
-        let mut res = String::new();
-        for rule in rules {
-            let decoded_head = Self::decode_triples(&[rule.head.clone()]);
-            let decoded_body: String = rule
-                .body
-                .iter()
-                .map(|lit| {
-                    let s = Self::decode_triples(&[lit.pattern.clone()]);
-                    if lit.negated {
-                        format!("not {{{}}}", s.trim())
-                    } else {
-                        s
-                    }
-                })
-                .collect();
-            write!(&mut res, "{{{}}}=>{{{}}}.\n", decoded_body, decoded_head).unwrap();
-        }
-        res
-    }
-    pub fn decode_triples(triples: &[Triple]) -> String {
-        let mut res = String::new();
-        for triple in triples {
-            let decoded_s = Encoder::decode(&triple.s.to_encoded()).unwrap();
-            let decoded_p = Encoder::decode(&triple.p.to_encoded()).unwrap();
-            let decoded_o = Encoder::decode(&triple.o.to_encoded()).unwrap();
-
-            writeln!(&mut res, "{} {} {}.", decoded_s, decoded_p, decoded_o).unwrap();
-        }
-        res
-    }
-    pub fn decode_bindings(bindings: &Binding) -> String {
-        let mut res = String::new();
-        for (key, val) in bindings.iter() {
-            let decoded_values: String = val.iter().map(|t| Encoder::decode(t).unwrap()).collect();
-
-            writeln!(
-                &mut res,
-                " {}: [{}] .",
-                Encoder::decode(key).unwrap(),
-                decoded_values
-            )
-            .unwrap();
-        }
-        res
-    }
-    pub fn decode_triple(triple: &Triple) -> String {
-        let s = Encoder::decode(&triple.s.to_encoded()).unwrap();
-        let p = Encoder::decode(&triple.p.to_encoded()).unwrap();
-        let o = Encoder::decode(&triple.o.to_encoded()).unwrap();
-        format!("{} {} {}", s, p, o)
-    }
     pub fn content_to_string(&self) -> String {
         let content = &self.triple_index.triples;
         TripleStore::decode_triples(content)

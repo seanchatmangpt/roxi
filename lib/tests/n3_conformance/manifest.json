@@ -1,7 +1,7 @@
 {
   "provenance": {
     "vendored_source": "https://github.com/eyereasoner/eye (reasoning/socrates, reasoning/path, reasoning/dog, reasoning/snaf, reasoning/deep-taxonomy, reasoning/nixon-diamond, reasoning/backward, reasoning/good-cobbler, reasoning/peano, reasoning/skos, reasoning/filter, reasoning/basic-monadic, reasoning/edt)",
-    "vendored_description": "The `vendored` suite reproduces EYE reasoner community test cases, lightly adapted where noted in each .n3 file's header comment. 5 cases (socrates, path, dog, snaf, deep-taxonomy [truncated from a 10000-level chain to 3 levels]) run unmodified (or near-unmodified) against this engine's supported subset and are 'active'. 6 more (nixon-diamond, backward, good-cobbler, peano, skos, filter) are vendored with `status: ignored` and a precise `blocked_reason` documenting the exact missing feature (rule-priority ordering, goal-directed/backward query evaluation, general list-term pattern unification, denial/`=> false` rule heads, `func:`/`string:lessThan` builtins). basic-monadic and edt are documentation-only stubs (no runnable _result.n3) noting why they're redundant-at-scale or need the same list-unification gap. Everything in `syntax` and hand-authored `builtins` cases is authored for this crate directly.",
+    "vendored_description": "The `vendored` suite reproduces EYE reasoner community test cases, lightly adapted where noted in each .n3 file's header comment. All 13 cases (socrates, path, dog, snaf, deep-taxonomy [truncated from a 10000-level chain to 3 levels], nixon-diamond, backward, good-cobbler, peano, skos, filter, basic-monadic [truncated to a 10-node cycle], edt [truncated to a 3-level chain, same feature as deep-taxonomy]) run against this engine's supported subset and are 'active' -- 0 ignored. Everything in `syntax` and hand-authored `builtins` cases is authored for this crate directly.",
     "last_synced": "2026-07-05"
   },
   "runner_semantics": "For every active case, the runner loads `input` via TripleStore::from, calls materialize(), decodes every inferred triple to its 'S P O.' string form, and asserts every triple listed in `expected` is present among them (a subset/entailment check, not exact equality -- both because forward-chaining fixpoints often derive more than any one hand-picked expectation, and because two of the vendored EYE cases were themselves only checked by EYE against a narrow, non-generic query).",
@@ -12,7 +12,9 @@
         {
           "id": "syntax_multi_triple_head",
           "name": "Multi-triple head rules",
-          "features": ["multi-triple-heads"],
+          "features": [
+            "multi-triple-heads"
+          ],
           "input": "syntax/multi_head.n3",
           "expected": "syntax/multi_head_result.n3",
           "status": "active"
@@ -20,15 +22,29 @@
         {
           "id": "syntax_literals",
           "name": "N3 Literals (strings, numbers, datatypes, langtags)",
-          "features": ["literals"],
+          "features": [
+            "literals"
+          ],
           "input": "syntax/literals.n3",
           "expected": "syntax/literals_result.n3",
           "status": "active"
         },
         {
+          "id": "syntax_bnode_property_lists",
+          "name": "Anonymous blank-node property lists [ p o ; p o ]",
+          "features": [
+            "bnode-property-lists"
+          ],
+          "input": "syntax/bnode_property_lists.n3",
+          "expected": "syntax/bnode_property_lists_result.n3",
+          "status": "active"
+        },
+        {
           "id": "syntax_blank_nodes",
           "name": "Blank nodes",
-          "features": ["blank-nodes"],
+          "features": [
+            "blank-nodes"
+          ],
           "input": "syntax/blank_nodes.n3",
           "expected": "syntax/blank_nodes_result.n3",
           "status": "active"
@@ -36,7 +52,9 @@
         {
           "id": "syntax_lists",
           "name": "RDF lists parsing",
-          "features": ["lists"],
+          "features": [
+            "lists"
+          ],
           "input": "syntax/lists.n3",
           "expected": "syntax/lists_result.n3",
           "status": "active"
@@ -44,7 +62,9 @@
         {
           "id": "syntax_quantifiers",
           "name": "@forAll and @forSome quantifiers",
-          "features": ["quantifiers"],
+          "features": [
+            "quantifiers"
+          ],
           "input": "syntax/quantifiers.n3",
           "expected": "syntax/quantifiers_result.n3",
           "status": "active"
@@ -52,17 +72,69 @@
         {
           "id": "syntax_quoted_graphs",
           "name": "Quoted graphs as terms",
-          "features": ["quoted-graphs"],
+          "features": [
+            "quoted-graphs"
+          ],
           "input": "syntax/quoted_graphs.n3",
           "expected": "syntax/quoted_graphs_result.n3",
           "status": "active"
         },
         {
+          "id": "syntax_keywords",
+          "name": "@keywords directive (a, is, of, true, false)",
+          "features": [
+            "keywords"
+          ],
+          "input": "syntax/keywords.n3",
+          "expected": "syntax/keywords_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "syntax_sameas_and_inverse_sugar",
+          "name": "= (owl:sameAs), <=> biconditional, inverse 'is ... of' and 'has' sugar",
+          "features": [
+            "sameas-sugar",
+            "biconditional",
+            "inverse-sugar",
+            "has-sugar"
+          ],
+          "input": "syntax/sameas_and_inverse_sugar.n3",
+          "expected": "syntax/sameas_and_inverse_sugar_result.n3",
+          "status": "active"
+        },
+        {
           "id": "syntax_backward_implication",
           "name": "Backward implication <= syntax sugar",
-          "features": ["backward-implication"],
+          "features": [
+            "backward-implication"
+          ],
           "input": "syntax/backward_implication.n3",
           "expected": "syntax/backward_implication_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "syntax_base_and_sparql_prefix",
+          "name": "@base + relative IRI resolution, and SPARQL-style PREFIX/BASE",
+          "features": [
+            "base",
+            "relative-iri-resolution",
+            "sparql-prefix",
+            "sparql-base"
+          ],
+          "input": "syntax/base_and_sparql_prefix.n3",
+          "expected": "syntax/base_and_sparql_prefix_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "syntax_paths",
+          "name": "Path syntax sugar: x!p (forward), x^p (inverse), and chaining",
+          "features": [
+            "forward-path",
+            "inverse-path",
+            "chained-path"
+          ],
+          "input": "syntax/paths.n3",
+          "expected": "syntax/paths_result.n3",
           "status": "active"
         }
       ]
@@ -73,7 +145,10 @@
         {
           "id": "builtin_log_equalTo",
           "name": "log:equalTo comparison",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_equal_to.n3",
           "expected": "builtins/log_equal_to_result.n3",
           "status": "active"
@@ -81,7 +156,10 @@
         {
           "id": "builtin_log_implies",
           "name": "log:implies dynamic rule inference",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_implies.n3",
           "expected": "builtins/log_implies_result.n3",
           "status": "active"
@@ -89,7 +167,10 @@
         {
           "id": "builtin_math_sum",
           "name": "math:sum addition operator",
-          "features": ["builtins", "math"],
+          "features": [
+            "builtins",
+            "math"
+          ],
           "input": "builtins/math_sum.n3",
           "expected": "builtins/math_sum_result.n3",
           "status": "active"
@@ -97,7 +178,10 @@
         {
           "id": "builtin_math_greaterThan",
           "name": "math:greaterThan comparison operator",
-          "features": ["builtins", "math"],
+          "features": [
+            "builtins",
+            "math"
+          ],
           "input": "builtins/math_greater_than.n3",
           "expected": "builtins/math_greater_than_result.n3",
           "status": "active"
@@ -105,7 +189,10 @@
         {
           "id": "builtin_list_in",
           "name": "list:in membership check",
-          "features": ["builtins", "list"],
+          "features": [
+            "builtins",
+            "list"
+          ],
           "input": "builtins/list_in.n3",
           "expected": "builtins/list_in_result.n3",
           "status": "active"
@@ -113,7 +200,10 @@
         {
           "id": "builtin_list_length",
           "name": "list:length size check",
-          "features": ["builtins", "list"],
+          "features": [
+            "builtins",
+            "list"
+          ],
           "input": "builtins/list_length.n3",
           "expected": "builtins/list_length_result.n3",
           "status": "active"
@@ -121,7 +211,10 @@
         {
           "id": "builtin_string_concat",
           "name": "string:concat string joining",
-          "features": ["builtins", "string"],
+          "features": [
+            "builtins",
+            "string"
+          ],
           "input": "builtins/string_concat.n3",
           "expected": "builtins/string_concat_result.n3",
           "status": "active"
@@ -129,7 +222,10 @@
         {
           "id": "builtin_string_length",
           "name": "string:length size check",
-          "features": ["builtins", "string"],
+          "features": [
+            "builtins",
+            "string"
+          ],
           "input": "builtins/string_length.n3",
           "expected": "builtins/string_length_result.n3",
           "status": "active"
@@ -137,7 +233,10 @@
         {
           "id": "builtin_log_collectAllIn",
           "name": "log:collectAllIn distinct-value collection into an RDF list",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_collect_all_in.n3",
           "expected": "builtins/log_collect_all_in_result.n3",
           "status": "active"
@@ -145,10 +244,619 @@
         {
           "id": "builtin_log_notIncludes",
           "name": "log:notIncludes SNAF negation-as-failure guard",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_not_includes.n3",
           "expected": "builtins/log_not_includes_result.n3",
           "status": "active"
+        },
+        {
+          "id": "builtin_string_contains",
+          "name": "string:contains",
+          "features": [
+            "string:contains"
+          ],
+          "input": "builtins/string_contains.n3",
+          "expected": "builtins/string_contains_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_containsIgnoringCase",
+          "name": "string:containsIgnoringCase",
+          "features": [
+            "string:containsIgnoringCase"
+          ],
+          "input": "builtins/string_contains_ignoring_case.n3",
+          "expected": "builtins/string_contains_ignoring_case_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_startsWith",
+          "name": "string:startsWith",
+          "features": [
+            "string:startsWith"
+          ],
+          "input": "builtins/string_starts_with.n3",
+          "expected": "builtins/string_starts_with_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_endsWith",
+          "name": "string:endsWith",
+          "features": [
+            "string:endsWith"
+          ],
+          "input": "builtins/string_ends_with.n3",
+          "expected": "builtins/string_ends_with_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_matches",
+          "name": "string:matches",
+          "features": [
+            "string:matches"
+          ],
+          "input": "builtins/string_matches.n3",
+          "expected": "builtins/string_matches_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_notMatches",
+          "name": "string:notMatches",
+          "features": [
+            "string:notMatches"
+          ],
+          "input": "builtins/string_not_matches.n3",
+          "expected": "builtins/string_not_matches_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_replace",
+          "name": "string:replace",
+          "features": [
+            "string:replace"
+          ],
+          "input": "builtins/string_replace.n3",
+          "expected": "builtins/string_replace_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_substring",
+          "name": "string:substring",
+          "features": [
+            "string:substring"
+          ],
+          "input": "builtins/string_substring.n3",
+          "expected": "builtins/string_substring_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_toUpperCase",
+          "name": "string:toUpperCase",
+          "features": [
+            "string:toUpperCase"
+          ],
+          "input": "builtins/string_to_upper_case.n3",
+          "expected": "builtins/string_to_upper_case_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_toLowerCase",
+          "name": "string:toLowerCase",
+          "features": [
+            "string:toLowerCase"
+          ],
+          "input": "builtins/string_to_lower_case.n3",
+          "expected": "builtins/string_to_lower_case_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_split",
+          "name": "string:split",
+          "features": [
+            "string:split"
+          ],
+          "input": "builtins/string_split.n3",
+          "expected": "builtins/string_split_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_equalIgnoringCase",
+          "name": "string:equalIgnoringCase",
+          "features": [
+            "string:equalIgnoringCase"
+          ],
+          "input": "builtins/string_equal_ignoring_case.n3",
+          "expected": "builtins/string_equal_ignoring_case_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_notEqualIgnoringCase",
+          "name": "string:notEqualIgnoringCase",
+          "features": [
+            "string:notEqualIgnoringCase"
+          ],
+          "input": "builtins/string_not_equal_ignoring_case.n3",
+          "expected": "builtins/string_not_equal_ignoring_case_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_greaterThan",
+          "name": "string:greaterThan",
+          "features": [
+            "string:greaterThan"
+          ],
+          "input": "builtins/string_greater_than.n3",
+          "expected": "builtins/string_greater_than_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_format",
+          "name": "string:format",
+          "features": [
+            "string:format"
+          ],
+          "input": "builtins/string_format.n3",
+          "expected": "builtins/string_format_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_string_scrape",
+          "name": "string:scrape",
+          "features": [
+            "string:scrape"
+          ],
+          "input": "builtins/string_scrape.n3",
+          "expected": "builtins/string_scrape_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_absoluteValue",
+          "name": "math:absoluteValue unary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_absolute_value.n3",
+          "expected": "builtins/math_absolute_value_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_negation",
+          "name": "math:negation unary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_negation.n3",
+          "expected": "builtins/math_negation_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_rounded",
+          "name": "math:rounded unary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_rounded.n3",
+          "expected": "builtins/math_rounded_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_ceiling",
+          "name": "math:ceiling unary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_ceiling.n3",
+          "expected": "builtins/math_ceiling_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_floor",
+          "name": "math:floor unary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_floor.n3",
+          "expected": "builtins/math_floor_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_exponentiation",
+          "name": "math:exponentiation binary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_exponentiation.n3",
+          "expected": "builtins/math_exponentiation_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_integerQuotient",
+          "name": "math:integerQuotient binary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_integer_quotient.n3",
+          "expected": "builtins/math_integer_quotient_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_min",
+          "name": "math:min list-reduction operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_min.n3",
+          "expected": "builtins/math_min_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_max",
+          "name": "math:max list-reduction operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_max.n3",
+          "expected": "builtins/math_max_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_sin",
+          "name": "math:sin unary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_sin.n3",
+          "expected": "builtins/math_sin_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_cos",
+          "name": "math:cos unary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_cos.n3",
+          "expected": "builtins/math_cos_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_tan",
+          "name": "math:tan unary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_tan.n3",
+          "expected": "builtins/math_tan_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_asin",
+          "name": "math:asin unary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_asin.n3",
+          "expected": "builtins/math_asin_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_acos",
+          "name": "math:acos unary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_acos.n3",
+          "expected": "builtins/math_acos_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_atan",
+          "name": "math:atan unary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_atan.n3",
+          "expected": "builtins/math_atan_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_atan2",
+          "name": "math:atan2 binary trigonometric operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_atan2.n3",
+          "expected": "builtins/math_atan2_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_logarithm",
+          "name": "math:logarithm binary operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_logarithm.n3",
+          "expected": "builtins/math_logarithm_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_math_memberCount",
+          "name": "math:memberCount list-cardinality operator",
+          "features": [
+            "builtins",
+            "math"
+          ],
+          "input": "builtins/math_member_count.n3",
+          "expected": "builtins/math_member_count_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_func_numeric_add",
+          "name": "func:numeric-add RIF builtin-function",
+          "features": [
+            "builtins",
+            "func"
+          ],
+          "input": "builtins/func_numeric_add.n3",
+          "expected": "builtins/func_numeric_add_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_time_year",
+          "name": "time:year extracts the year from an xsd:dateTime",
+          "features": [
+            "builtins",
+            "time"
+          ],
+          "input": "builtins/time_year.n3",
+          "expected": "builtins/time_year_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_crypto_sha256",
+          "name": "crypto:sha256 hex digest of a string",
+          "features": [
+            "builtins",
+            "crypto"
+          ],
+          "input": "builtins/crypto_sha256.n3",
+          "expected": "builtins/crypto_sha256_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_first",
+          "name": "list:first first-member access",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_first.n3",
+          "expected": "builtins/list_first_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_rest",
+          "name": "list:rest tail-of-list access",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_rest.n3",
+          "expected": "builtins/list_rest_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_last",
+          "name": "list:last last-member access",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_last.n3",
+          "expected": "builtins/list_last_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_member",
+          "name": "list:member membership generator (list-as-subject)",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_member.n3",
+          "expected": "builtins/list_member_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_memberAt",
+          "name": "list:memberAt indexed access",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_member_at.n3",
+          "expected": "builtins/list_member_at_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_remove",
+          "name": "list:remove item removal",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_remove.n3",
+          "expected": "builtins/list_remove_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_sort",
+          "name": "list:sort ascending sort",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_sort.n3",
+          "expected": "builtins/list_sort_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_unique",
+          "name": "list:unique duplicate removal",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_unique.n3",
+          "expected": "builtins/list_unique_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_reverse",
+          "name": "list:reverse order reversal",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_reverse.n3",
+          "expected": "builtins/list_reverse_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_list_iterate",
+          "name": "list:iterate (index item) pair generator",
+          "features": [
+            "builtins",
+            "list"
+          ],
+          "input": "builtins/list_iterate.n3",
+          "expected": "builtins/list_iterate_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_includes",
+          "name": "log:includes -- positive counterpart of log:notIncludes",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_includes.n3",
+          "expected": "builtins/log_includes_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_conjunction",
+          "name": "log:conjunction -- union the triples of a list of quoted formulas",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_conjunction.n3",
+          "expected": "builtins/log_conjunction_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_dtlit",
+          "name": "log:dtlit -- construct a typed literal from (lexical datatype)",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_dtlit.n3",
+          "expected": "builtins/log_dtlit_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_rawType",
+          "name": "log:rawType -- syntactic type of a literal (its datatype IRI)",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_raw_type.n3",
+          "expected": "builtins/log_raw_type_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_uri",
+          "name": "log:uri -- plain-string form of a resource's IRI",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_uri.n3",
+          "expected": "builtins/log_uri_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_localName",
+          "name": "log:localName -- local name portion of an IRI",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_local_name.n3",
+          "expected": "builtins/log_local_name_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_bound",
+          "name": "log:bound -- row constraint requiring the subject to already be bound",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_bound.n3",
+          "expected": "builtins/log_bound_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_n3String",
+          "name": "log:n3String -- serialize a quoted formula's triples back to N3 text",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_n3_string.n3",
+          "expected": "builtins/log_n3_string_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_parsedAsN3",
+          "name": "log:parsedAsN3 -- parse an N3-text string literal into a quoted formula",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_parsed_as_n3.n3",
+          "expected": "builtins/log_parsed_as_n3_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_forAllIn",
+          "name": "log:forAllIn -- universal check of a quoted formula over every list member",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_for_all_in.n3",
+          "expected": "builtins/log_for_all_in_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_ifThenElseIn",
+          "name": "log:ifThenElseIn -- conditional pick between two terms based on a quoted formula",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_if_then_else_in.n3",
+          "expected": "builtins/log_if_then_else_in_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_conclusion",
+          "name": "log:conclusion -- native closure of a quoted formula's nested log:implies rules",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_conclusion.n3",
+          "expected": "builtins/log_conclusion_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "builtin_log_semantics",
+          "name": "log:semantics -- UNSUPPORTED: requires fetching a remote document by URI",
+          "features": ["builtins", "log"],
+          "input": "builtins/log_semantics.n3",
+          "expected": "builtins/log_semantics_result.n3",
+          "status": "ignored",
+          "blocked_reason": "log:semantics requires network I/O (fetch + parse a remote N3 document by URI) to compute correctly for an arbitrary IRI; this engine performs no network access and only supports already-loaded graphs, so it is not registered as a builtin at all (see lib/src/builtins/mod.rs's LOG_SEMANTICS comment) rather than silently returning a wrong/empty answer."
         }
       ]
     },
@@ -158,7 +866,11 @@
         {
           "id": "vendored_socrates",
           "name": "Socrates subclass syllogism (rdfs:subClassOf forward chaining)",
-          "features": ["vendored", "subclass", "forward-chaining"],
+          "features": [
+            "vendored",
+            "subclass",
+            "forward-chaining"
+          ],
           "input": "vendored/socrates.n3",
           "expected": "vendored/socrates_result.n3",
           "status": "active"
@@ -166,7 +878,11 @@
         {
           "id": "vendored_path",
           "name": "Symmetric-transitive path closure over a road graph (<= sugar)",
-          "features": ["vendored", "backward-implication", "transitive-closure"],
+          "features": [
+            "vendored",
+            "backward-implication",
+            "transitive-closure"
+          ],
           "input": "vendored/path.n3",
           "expected": "vendored/path_result.n3",
           "status": "active"
@@ -174,7 +890,12 @@
         {
           "id": "vendored_dog",
           "name": "EYE 'dog' corpus case: log:collectAllIn + n-ary math:sum + math:greaterThan",
-          "features": ["vendored", "log:collectAllIn", "math:sum", "math:greaterThan"],
+          "features": [
+            "vendored",
+            "log:collectAllIn",
+            "math:sum",
+            "math:greaterThan"
+          ],
           "input": "vendored/dog.n3",
           "expected": "vendored/dog_result.n3",
           "status": "active"
@@ -182,7 +903,10 @@
         {
           "id": "vendored_snaf",
           "name": "EYE 'snaf' corpus case: log:notIncludes SNAF guard",
-          "features": ["vendored", "log:notIncludes"],
+          "features": [
+            "vendored",
+            "log:notIncludes"
+          ],
           "input": "vendored/snaf.n3",
           "expected": "vendored/snaf_result.n3",
           "status": "active"
@@ -190,7 +914,12 @@
         {
           "id": "vendored_deep_taxonomy",
           "name": "EYE 'deep-taxonomy' corpus case (truncated to a 3-level chain): rdfs:subClassOf backward-chaining transitivity",
-          "features": ["vendored", "backward-implication", "subclass", "transitive-closure"],
+          "features": [
+            "vendored",
+            "backward-implication",
+            "subclass",
+            "transitive-closure"
+          ],
           "input": "vendored/deep_taxonomy.n3",
           "expected": "vendored/deep_taxonomy_result.n3",
           "status": "active"
@@ -198,74 +927,125 @@
         {
           "id": "vendored_nixon_diamond",
           "name": "EYE 'nixon-diamond' corpus case: rule-priority-dependent SNAF guard",
-          "features": ["vendored", "log:notIncludes", "rule-priority"],
+          "features": [
+            "vendored",
+            "log:notIncludes",
+            "rule-priority"
+          ],
           "input": "vendored/nixon_diamond.n3",
           "expected": "vendored/nixon_diamond_result.n3",
-          "status": "ignored",
-          "blocked_reason": "Reasoner::materialize evaluates every rule in a stratum against one shared per-iteration TripleIndex snapshot, batch-merging all newly-derived triples only after the whole iteration finishes -- there is no rule-priority/ordering concept, so Rule 1's log:notIncludes guard can never observe Rule 2's NonPacifist fact within the same iteration. Both ex:Pacifist and ex:NonPacifist get derived instead of only ex:NonPacifist. See the file's own header comment for the full explanation."
+          "status": "active"
         },
         {
           "id": "vendored_backward_math",
           "name": "EYE 'backward' corpus case: goal-directed math:greaterThan proof",
-          "features": ["vendored", "backward-implication", "goal-directed"],
+          "features": [
+            "vendored",
+            "backward-implication",
+            "goal-directed"
+          ],
           "input": "vendored/backward_math.n3",
-          "expected": "vendored/backward_math_result.n3",
-          "status": "ignored",
-          "blocked_reason": "EYE proves this goal-directed, seeding the backward rule with the concrete query '5 :moreInterestingThan 3' and working backward to check '5 math:greaterThan 3'. This engine is purely forward-chaining with no query/goal-injection mechanism, so '?X math:greaterThan ?Y' with no facts providing candidate X/Y values never binds anything."
+          "expected": "vendored/backward_math.n3",
+          "prove_goal": [
+            "5",
+            "<http://example.org/#moreInterestingThan>",
+            "3"
+          ],
+          "status": "active"
         },
         {
           "id": "vendored_good_cobbler",
           "name": "EYE 'good-cobbler' corpus case: list-term pattern unification",
-          "features": ["vendored", "list-term-unification"],
+          "features": [
+            "vendored",
+            "list-term-unification"
+          ],
           "input": "vendored/good_cobbler.n3",
           "expected": "vendored/good_cobbler_result.n3",
-          "status": "ignored",
-          "blocked_reason": "List terms are opaque synthetic blank-node ids (see triples.rs LIST_REGISTRY); TripleIndex::query only compares such ids for exact equality and does no structural/element-wise list-pattern unification, so a rule pattern like (:good ?Y) can never match a separately-parsed ground list (:good :Cobbler) even though they're structurally compatible."
+          "status": "active"
         },
         {
           "id": "vendored_peano",
           "name": "EYE 'peano' corpus case: nested list-term backward-chained arithmetic",
-          "features": ["vendored", "list-term-unification", "backward-implication", "recursion"],
+          "features": [
+            "vendored",
+            "list-term-unification",
+            "backward-implication",
+            "recursion"
+          ],
           "input": "vendored/peano.n3",
           "expected": "vendored/peano_result.n3",
-          "status": "ignored",
-          "blocked_reason": "Requires structural unification of nested list-term patterns (e.g. (?A (:s ?B)) against derived nested list values), recursively, driven backward from a query goal. This engine has neither general list-pattern unification (see vendored_good_cobbler) nor backward/goal-directed evaluation; peano needs both, compounded by recursion. Completely out of scope."
+          "prove_goal_n3": "@prefix : <http://example.org/#>. ((:s (:s 0)) (:s 0)) :add (:s (:s (:s 0))).",
+          "status": "active"
+        },
+        {
+          "id": "vendored_peano_solve_variable_goal",
+          "name": "EYE 'peano' corpus case: variable-goal backward chaining via TripleStore::solve",
+          "features": [
+            "vendored",
+            "list-term-unification",
+            "backward-implication",
+            "recursion",
+            "variable-goal-solve"
+          ],
+          "input": "vendored/peano.n3",
+          "expected": "vendored/peano_result.n3",
+          "solve_goal": "@prefix : <http://example.org/#>. (?X (:s 0)) :add (:s (:s 0)).",
+          "solve_expected_bindings": [
+            { "X": "@prefix : <http://example.org/#>. :Dummy :dummy (:s 0)." }
+          ],
+          "status": "active"
         },
         {
           "id": "vendored_skos",
           "name": "EYE 'skos' corpus case: SKOS rules with denial (=> false) heads",
-          "features": ["vendored", "denial-rules", "func-namespace"],
+          "features": [
+            "vendored",
+            "denial-rules",
+            "semicolon-syntax",
+            "func-namespace"
+          ],
           "input": "vendored/skos.n3",
-          "expected": "vendored/skos.n3",
-          "status": "ignored",
-          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/skos.n3). Beyond the ordinary forward-chaining SKOS rules this engine already handles, skos-rules.n3 requires a bodyless '=> false.' denial-rule head (Rule.head: Triple has no boolean/denial variant), ';'-shared-subject predicate-object-list syntax, and the func: RIF-builtin-function namespace (func:lang-from-PlainLiteral), none of which this ticket's scope covers."
+          "expected": "vendored/skos_result.n3",
+          "expect_no_denial_violations": true,
+          "status": "active"
         },
         {
           "id": "vendored_filter",
           "name": "EYE 'filter' corpus case: log:collectAllIn combined with string:lessThan",
-          "features": ["vendored", "log:collectAllIn", "string:lessThan"],
+          "features": [
+            "vendored",
+            "log:collectAllIn",
+            "string:lessThan",
+            "list:in"
+          ],
           "input": "vendored/filter.n3",
-          "expected": "vendored/filter.n3",
-          "status": "ignored",
-          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/filter.n3). Its collectAllIn use is otherwise exactly what this ticket's log:collectAllIn implementation supports, but the embedded formula filters via string:lessThan, a string: builtin not yet implemented (only string:length/string:concat exist)."
+          "expected": "vendored/filter_result.n3",
+          "status": "active"
         },
         {
           "id": "vendored_basic_monadic",
-          "name": "EYE 'basic-monadic' corpus case: cyclic list-term pattern + generated benchmark data",
-          "features": ["vendored", "list-term-unification"],
+          "name": "EYE 'basic-monadic' corpus case: cyclic list-term pattern (truncated to a 10-node cycle)",
+          "features": [
+            "vendored",
+            "list-term-unification",
+            "repeated-pattern-variable"
+          ],
           "input": "vendored/basic_monadic.n3",
-          "expected": "vendored/basic_monadic.n3",
-          "status": "ignored",
-          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/basic_monadic.n3). Needs the same list-term structural unification good_cobbler/peano lack (here to detect a repeated variable closing an 11-element cycle list), and its fixture data is randomly-generated 10^n-scale benchmark data rather than a small fact set."
+          "expected": "vendored/basic_monadic_result.n3",
+          "status": "active"
         },
         {
           "id": "vendored_edt",
-          "name": "EYE 'edt' corpus case: duplicate of deep-taxonomy at unpractical scale",
-          "features": ["vendored", "subclass", "duplicate"],
+          "name": "EYE 'edt' corpus case: duplicate of deep-taxonomy (truncated to a 3-level chain)",
+          "features": [
+            "vendored",
+            "subclass",
+            "duplicate"
+          ],
           "input": "vendored/edt.n3",
-          "expected": "vendored/edt.n3",
-          "status": "ignored",
-          "blocked_reason": "Not vendored as a runnable case (no _result.n3 sibling exists; see the header comment in vendored/edt.n3). Exercises the exact same rdfs:subClassOf backward rule as vendored_deep_taxonomy (which does run, truncated) over a 30002-triple, 10000-level chain -- a scale/perf duplicate, not a new feature."
+          "expected": "vendored/edt_result.n3",
+          "status": "active"
         }
       ]
     }

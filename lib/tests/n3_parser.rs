@@ -126,13 +126,12 @@ fn test_parse_lists() {
     );
 }
 
-/// TICKET-005 (DoD): Test parsing @forAll and @forSome quantifiers.
-///
-/// This engine uses one flat, process-wide variable namespace rather than
-/// per-formula @forSome/@forAll scoping, so quantifier declarations are
-/// accepted syntactically (and skipped) rather than changing how `?x`/`?y`
-/// bind -- the rule that follows still parses and behaves exactly as it
-/// would without the declarations.
+/// TICKET-005 (DoD), updated for real quantifier scoping (see
+/// `n3rule_parser.rs`'s `ScopeStack`): `@forAll ?x` at the document root
+/// universally quantifies `?x` (it stays an ordinary pattern variable, just
+/// renamed to a formula-scoped symbol), while `@forSome ?y` existentially
+/// quantifies `?y`, which is skolemized to a fresh blank node AT PARSE TIME
+/// -- so `?y`'s occurrence in the rule is no longer a variable at all.
 #[test]
 fn test_parse_quantifiers() {
     let input = "@prefix : <http://example.org/> .\n\
@@ -143,8 +142,11 @@ fn test_parse_quantifiers() {
     let rules = Parser::parse_rules(input).expect("quantifier declarations should parse");
     assert_eq!(1, rules.len());
     assert_eq!(1, rules[0].body.len());
-    assert!(rules[0].body[0].pattern.s.is_var());
-    assert!(rules[0].body[0].pattern.o.is_var());
+    assert!(rules[0].body[0].pattern.s.is_var(), "@forAll ?x stays a (renamed) variable");
+    assert!(
+        !rules[0].body[0].pattern.o.is_var(),
+        "@forSome ?y must be skolemized to a fixed blank node, not remain a variable"
+    );
 }
 
 /// TICKET-005 (DoD): Test parsing quoted graphs (e.g., {...} used as terms).

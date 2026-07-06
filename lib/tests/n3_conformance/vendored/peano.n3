@@ -1,16 +1,13 @@
 # Vendored from https://github.com/eyereasoner/eye/blob/master/reasoning/peano/peano.n3
 # Unmodified.
 #
-# BLOCKED (see manifest.json "status": "ignored"): Peano arithmetic here is
-# encoded entirely as nested nullary/backward rules over nested list terms,
-# e.g. `{(?A 0) :add ?A} <= true.` and `{(?A (:s ?B)) :add (:s ?C)} <= {(?A ?B)
-# :add ?C.}`, requiring genuine structural unification of nested list-term
-# patterns against nested list-term facts/derived values (matching `:s`
-# wrapped depths against a variable), recursively, driven backward from a
-# query goal. As documented in good_cobbler.n3 above, this engine has no
-# list-pattern structural unification at all (only opaque-id equality) and
-# no backward/goal-directed evaluation -- both of which peano fundamentally
-# requires, compounded by recursive nesting. Completely out of scope.
+# Peano arithmetic encoded entirely as nested nullary/backward rules over
+# nested list terms, e.g. `{(?A 0) :add ?A} <= true.` and `{(?A (:s ?B)) :add
+# (:s ?C)} <= {(?A ?B) :add ?C.}`. Proved goal-directed via `TripleStore::prove`
+# (see manifest.json's `prove_goal_n3`), which recursively unifies nested
+# list-term patterns (`VarOrTerm::unify_list_pattern`) against nested
+# list-term goal values as it works backward through the recursive `:add`
+# rule -- see `backwardchaining.rs`'s `unify_ground`/`prove_inner`.
 @prefix log: <http://www.w3.org/2000/10/swap/log#>.
 @prefix : <http://example.org/#>.
 

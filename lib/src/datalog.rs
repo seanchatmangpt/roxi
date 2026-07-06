@@ -135,6 +135,40 @@ pub fn validate_rules(
         body_relations.push(brs);
     }
 
+    // `log:notIncludes` (a SNAF/negation-as-failure guard: `?scope
+    // log:notIncludes { pattern }`) is itself a POSITIVE body literal whose
+    // own predicate is `log:notIncludes` -- the *real* dependency this rule
+    // has is on whatever relation `pattern` (the quoted-formula object)
+    // talks about, and that dependency is negative (this rule's stratum
+    // must be strictly greater than that relation's), exactly like an
+    // ordinary `not { ... }` literal. Without this, stratification is blind
+    // to the guard entirely (its analysis only ever inspects a literal's
+    // own top-level predicate), so a rule guarded by `log:notIncludes` on a
+    // predicate some sibling rule of the same stratum derives can run
+    // before that sibling ever fires -- the real EYE `nixon_diamond` corpus
+    // case (Rule 1's `log:notIncludes { ?x a ex:NonPacifist }` guard must
+    // be stratified strictly after Rule 2, which derives ex:NonPacifist).
+    let notincludes_inner_relations: Vec<Vec<usize>> = rules.iter().map(|rule| {
+        let mut inner = Vec::new();
+        for lit in &rule.body {
+            if lit.negated || !lit.pattern.p.is_term() {
+                continue;
+            }
+            const LOG_NOT_INCLUDES: &str = "<http://www.w3.org/2000/10/swap/log#notIncludes>";
+            if Encoder::decode(&lit.pattern.p.to_encoded()).as_deref() != Some(LOG_NOT_INCLUDES) {
+                continue;
+            }
+            if let Some(triples) = VarOrTerm::formula_triples(lit.pattern.o.to_encoded()) {
+                for t in &triples {
+                    let r = relation_of(t);
+                    predicates.insert(r);
+                    inner.push(r);
+                }
+            }
+        }
+        inner
+    }).collect();
+
     let predicate_list: Vec<usize> = predicates.into_iter().collect();
     let num_predicates = predicate_list.len();
 
@@ -168,6 +202,11 @@ pub fn validate_rules(
                 )),
             };
             edges.push((body_idx, head_idx, lit.negated || has_agg));
+        }
+
+        for &inner_r in &notincludes_inner_relations[rule_idx] {
+            let inner_idx = pred_to_idx[&inner_r];
+            edges.push((inner_idx, head_idx, true));
         }
     }
 

@@ -193,6 +193,19 @@ impl TripleIndex {
         }
     }
     pub fn query(&self, query_triple: &Triple, triple_counter: Option<usize>) -> Option<Binding> {
+        // A subject/object that's a *non-ground* list-term pattern (e.g.
+        // `(:good ?Y)`) can never be found via the ordinary indexed
+        // lookups below -- those compare list-term ids for exact equality,
+        // but every list gets a fresh synthetic id at parse time, so a
+        // pattern list is never `==` to a separately-parsed, structurally
+        // compatible ground list. Route those queries through a dedicated
+        // structural-unification scan instead (see `VarOrTerm::unify_list_pattern`).
+        let s_is_list_pattern = query_triple.s.is_term() && VarOrTerm::is_nonground_list_pattern(query_triple.s.to_encoded());
+        let o_is_list_pattern = query_triple.o.is_term() && VarOrTerm::is_nonground_list_pattern(query_triple.o.to_encoded());
+        if s_is_list_pattern || o_is_list_pattern {
+            return self.query_list_pattern(query_triple, triple_counter, s_is_list_pattern, o_is_list_pattern);
+        }
+
         let mut matched_binding = Binding::new();
         let counter_check = if let Some(size) = triple_counter {
             size
@@ -387,6 +400,92 @@ impl TripleIndex {
                         }
                     }
                 }
+            }
+        }
+
+        if matched_binding.len() > 0 {
+            Some(matched_binding)
+        } else {
+            None
+        }
+    }
+
+    /// A linear-scan fallback for queries where the subject and/or object
+    /// is a non-ground list-term pattern (see `VarOrTerm::unify_list_pattern`'s
+    /// doc comment for why the ordinary indexed lookups in `query` can't
+    /// handle this). Correctness over speed: this crate's list-pattern
+    /// corpus cases (the real EYE `good_cobbler`/`peano` cases) are small
+    /// fact sets, not indexed-lookup-scale data.
+    fn query_list_pattern(
+        &self,
+        query_triple: &Triple,
+        triple_counter: Option<usize>,
+        s_is_list_pattern: bool,
+        o_is_list_pattern: bool,
+    ) -> Option<Binding> {
+        let counter_check = triple_counter.unwrap_or(self.counter);
+        let mut matched_binding = Binding::new();
+
+        for (idx, triple) in self.triples.iter().enumerate() {
+            if idx > counter_check {
+                break;
+            }
+            if query_triple.p.is_term() && triple.p.to_encoded() != query_triple.p.to_encoded() {
+                continue;
+            }
+            if !s_is_list_pattern && query_triple.s.is_term() && triple.s.to_encoded() != query_triple.s.to_encoded() {
+                continue;
+            }
+            if !o_is_list_pattern && query_triple.o.is_term() && triple.o.to_encoded() != query_triple.o.to_encoded() {
+                continue;
+            }
+
+            let mut extra_bindings = Vec::new();
+            if s_is_list_pattern
+                && !VarOrTerm::unify_list_pattern(query_triple.s.to_encoded(), triple.s.to_encoded(), &mut extra_bindings)
+            {
+                continue;
+            }
+            if o_is_list_pattern
+                && !VarOrTerm::unify_list_pattern(query_triple.o.to_encoded(), triple.o.to_encoded(), &mut extra_bindings)
+            {
+                continue;
+            }
+
+            // A variable can occur more than once inside a single list
+            // pattern (e.g. the real EYE `basic-monadic` corpus case's
+            // 11-element cycle-detection list `(?D0 ?D1 ... ?D9 ?D0)`,
+            // where `?D0` closes the cycle by repeating as both the first
+            // and last member) -- `unify_list_pattern` binds every
+            // occurrence independently without checking they agree, so a
+            // repeated variable must be reconciled here: reject this
+            // candidate triple if any variable is bound to two different
+            // values within the same match.
+            {
+                let mut consistent = HashMap::new();
+                let mut ok = true;
+                for &(var_id, val_id) in &extra_bindings {
+                    match consistent.get(&var_id) {
+                        Some(&existing) if existing != val_id => { ok = false; break; }
+                        _ => { consistent.insert(var_id, val_id); }
+                    }
+                }
+                if !ok {
+                    continue;
+                }
+            }
+
+            if query_triple.s.is_var() {
+                matched_binding.add(&query_triple.s.to_encoded(), triple.s.to_encoded());
+            }
+            if query_triple.p.is_var() {
+                matched_binding.add(&query_triple.p.to_encoded(), triple.p.to_encoded());
+            }
+            if query_triple.o.is_var() {
+                matched_binding.add(&query_triple.o.to_encoded(), triple.o.to_encoded());
+            }
+            for (var_id, val_id) in extra_bindings {
+                matched_binding.add(&var_id, val_id);
             }
         }
 

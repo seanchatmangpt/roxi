@@ -134,4 +134,3 @@ fn parse_blank_node_in_body() {
     .unwrap();
     assert_eq!(rules.len(), 1);
 }
-
