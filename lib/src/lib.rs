@@ -29,6 +29,7 @@ pub mod aggregation;
 pub mod shacl;
 pub mod shex;
 pub mod shex_native;
+pub mod shexc_parser;
 pub mod datalog;
 
 extern crate pest;
@@ -278,6 +279,20 @@ impl TripleStore {
         shape_map: &[(String, String)],
     ) -> Result<crate::shex::ShexValidationReport, Box<dyn std::error::Error>> {
         crate::shex::validate_shex(&self.triple_index, schema_json, shape_map)
+    }
+
+    /// Validate specific (focus-node, shape) pairs against a ShEx schema
+    /// given in **ShExC** (compact syntax) rather than ShExJ -- parses via
+    /// `shexc_parser::parse_shexc` (an 80/20 subset, see that module's doc
+    /// comment for scope) then delegates to the same validation path as
+    /// `validate_shex`, so there is no separate/duplicated validation logic.
+    pub fn validate_shex_c(
+        &self,
+        schema_shexc: &str,
+        shape_map: &[(String, String)],
+    ) -> Result<crate::shex_native::ShexValidationReport, String> {
+        let schema = crate::shexc_parser::parse_shexc(schema_shexc)?;
+        crate::shex_native::validate_shex_schema(&self.triple_index, &schema, shape_map)
     }
 }
 

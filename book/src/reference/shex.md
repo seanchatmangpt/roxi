@@ -10,9 +10,9 @@ In Roxi, the ShEx validation pipeline (`lib/src/shex_native.rs`, re-exported fro
 
 ---
 
-## 2. ShExJ Format Compilation
+## 2. ShExJ and ShExC Format Compilation
 
-To minimize parsing overhead and avoid compiling a second complex Turtle-like grammar, Roxi adopts **ShExJ** (the JSON serialization of ShEx schemas) as its primary schema input.
+Roxi accepts both ShEx schema formats. **ShExJ** (the JSON serialization) has been the primary input since the validator's native rewrite (see `TripleStore::validate_shex`). **ShExC** (the human-authored compact syntax) is also supported for the common 80/20 surface via a dedicated pest grammar (`lib/src/parser/shexc.pest` + `lib/src/shexc_parser.rs`, `TripleStore::validate_shex_c`) — covering `PREFIX`/`BASE`, shape declarations, `CLOSED`/`EXTRA`, triple constraints with cardinality, `EachOf`/`OneOf`, `ShapeAnd`/`ShapeOr`/`ShapeNot`, shape references, NodeKind/datatype/facets, and value sets. Both front ends build the exact same `Schema` AST and share one validator — there is no separate ShExC-specific validation path. Semantic actions, imports, triple-expression labels/inclusion, ShapeMap compact syntax, and a few other long-tail constructs are out of scope and return a clear parse error rather than silently mis-parsing.
 
 During schema loading:
 1. The JSON schema string is parsed into AST structures using `serde_json`.

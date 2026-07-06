@@ -43,12 +43,12 @@ use serde::Deserialize;
 // the vocabulary this crate's ShEx test suite exercises.
 // ---------------------------------------------------------------------
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Schema {
     pub shapes: Vec<ShapeDecl>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct ShapeDecl {
     pub id: String,
     #[serde(rename = "shapeExpr")]
@@ -61,14 +61,14 @@ pub struct ShapeDecl {
 /// inlining it) -- found via a real vendored W3C shexTest case
 /// (`1dotRefOR3_fail`) during native-vs-delegated comparison testing, not
 /// anticipated up front.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum ShapeExprOrRef {
     Ref(String),
     Expr(ShapeExpr),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "type")]
 pub enum ShapeExpr {
     Shape {
@@ -108,7 +108,7 @@ pub enum ShapeExpr {
     },
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "type")]
 pub enum TripleExpr {
     TripleConstraint {
@@ -126,7 +126,7 @@ pub enum TripleExpr {
     },
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
 pub enum ValueSetValue {
     IriStem {
@@ -175,12 +175,25 @@ pub fn validate_shex_native(
     shape_map: &[(String, String)],
 ) -> Result<ShexValidationReport, Box<dyn std::error::Error>> {
     let schema: Schema = serde_json::from_str(schema_json_str)?;
+    validate_shex_schema(data, &schema, shape_map).map_err(Into::into)
+}
+
+/// Same validation as `validate_shex_native`, but takes an already-parsed
+/// `Schema` directly rather than a ShExJ JSON string -- lets callers with a
+/// different front end (e.g. `shexc_parser::parse_shexc`, ShExC rather than
+/// ShExJ) reuse the exact same validation logic with no JSON round-trip and
+/// no duplicated code.
+pub fn validate_shex_schema(
+    data: &TripleIndex,
+    schema: &Schema,
+    shape_map: &[(String, String)],
+) -> Result<ShexValidationReport, String> {
     let mut failures = Vec::new();
     let mut conforms = true;
 
     for (node_str, shape_label) in shape_map {
         if node_str.is_empty() {
-            return Err(format!("invalid focus node syntax: empty node string").into());
+            return Err("invalid focus node syntax: empty node string".to_string());
         }
         let decl = schema
             .shapes
