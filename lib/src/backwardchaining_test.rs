@@ -140,3 +140,39 @@ use crate::{BackwardChainer, Encoder, Syntax, Triple, TripleStore, VarOrTerm};
         let expected = expected_store.rules_index.rules[0].head.o.clone();
         assert_eq!(bound[0], expected.to_encoded());
     }
+
+    /// Regression for a real bug found by an independent adversarial review
+    /// pass: `solve_inner` used to return a bare `Binding`, so a goal that
+    /// reduces (via a `<=` rule) to a *failed* ground builtin check (e.g.
+    /// `3 math:greaterThan 5`, false) and one that reduces to a *successful*
+    /// ground check (`5 math:greaterThan 3`, true) both ended up represented
+    /// by the same zero-column `Binding::new()` -- since `Binding::len() ==
+    /// 0` means both "zero rows" (failure) and "one row, zero columns"
+    /// (ground success), and the code couldn't tell them apart. That made
+    /// `TripleStore::prove`/`solve` report BOTH as proven, regardless of
+    /// whether the constraint actually held. Fixed by having `solve_inner`
+    /// return `Option<Binding>` (`None` = not provable) instead.
+    #[test]
+    fn test_prove_rejects_ground_goal_whose_body_constraint_is_actually_false() {
+        let rules = "@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+@prefix : <http://example.org/#>.
+{ ?X :moreInterestingThan ?Y. } <= { ?X math:greaterThan ?Y. }.";
+        let store = TripleStore::from(rules);
+
+        let true_goal = Triple::from(
+            "5".to_string(),
+            "<http://example.org/#moreInterestingThan>".to_string(),
+            "3".to_string(),
+        );
+        assert!(store.prove(&true_goal), "5 > 3 should be provable");
+
+        let false_goal = Triple::from(
+            "3".to_string(),
+            "<http://example.org/#moreInterestingThan>".to_string(),
+            "5".to_string(),
+        );
+        assert!(
+            !store.prove(&false_goal),
+            "3 > 5 is false -- prove() must NOT report this as provable"
+        );
+    }

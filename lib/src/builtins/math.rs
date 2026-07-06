@@ -15,6 +15,7 @@ pub(crate) const MATH_NOT_LESS_THAN: &str = "<http://www.w3.org/2000/10/swap/mat
 pub(crate) const MATH_NOT_GREATER_THAN: &str = "<http://www.w3.org/2000/10/swap/math#notGreaterThan>";
 pub(crate) const MATH_LESS_THAN: &str = "<http://www.w3.org/2000/10/swap/math#lessThan>";
 pub(crate) const MATH_EQUAL_TO: &str = "<http://www.w3.org/2000/10/swap/math#equalTo>";
+pub(crate) const MATH_NOT_EQUAL_TO: &str = "<http://www.w3.org/2000/10/swap/math#notEqualTo>";
 pub(crate) const MATH_ABSOLUTE_VALUE: &str = "<http://www.w3.org/2000/10/swap/math#absoluteValue>";
 pub(crate) const MATH_NEGATION: &str = "<http://www.w3.org/2000/10/swap/math#negation>";
 pub(crate) const MATH_ROUNDED: &str = "<http://www.w3.org/2000/10/swap/math#rounded>";
@@ -61,6 +62,12 @@ pub(crate) fn eval_less_than(pattern: &Triple, bindings: &Binding) -> Option<Bin
 pub(crate) fn eval_math_equal_to(pattern: &Triple, bindings: &Binding) -> Option<Binding> {
     eval_row_constraint(pattern, bindings, |s, o| {
         matches!((numeric_value(s), numeric_value(o)), (Some(a), Some(b)) if a == b)
+    })
+}
+
+pub(crate) fn eval_math_not_equal_to(pattern: &Triple, bindings: &Binding) -> Option<Binding> {
+    eval_row_constraint(pattern, bindings, |s, o| {
+        matches!((numeric_value(s), numeric_value(o)), (Some(a), Some(b)) if a != b)
     })
 }
 

@@ -16,6 +16,8 @@ pub(crate) const LIST_SORT: &str = "<http://www.w3.org/2000/10/swap/list#sort>";
 pub(crate) const LIST_UNIQUE: &str = "<http://www.w3.org/2000/10/swap/list#unique>";
 pub(crate) const LIST_REVERSE: &str = "<http://www.w3.org/2000/10/swap/list#reverse>";
 pub(crate) const LIST_ITERATE: &str = "<http://www.w3.org/2000/10/swap/list#iterate>";
+pub(crate) const LIST_NOT_MEMBER: &str = "<http://www.w3.org/2000/10/swap/list#notMember>";
+pub(crate) const LIST_FIRST_REST: &str = "<http://www.w3.org/2000/10/swap/list#firstRest>";
 
 pub(crate) fn eval_list_length(pattern: &Triple, bindings: &Binding) -> Option<Binding> {
     eval_functional(pattern, bindings, |pattern, bindings, row| {
@@ -100,6 +102,61 @@ pub(crate) fn eval_list_member(pattern: &Triple, bindings: &Binding) -> Option<B
                 copy_row(bindings, row, &mut result);
                 result.add(&obj_var, m);
             }
+        }
+    }
+    if result.len() > 0 {
+        Some(result)
+    } else {
+        None
+    }
+}
+
+/// `list:notMember` -- subject is a (ground) list, object is a value
+/// already bound elsewhere; succeeds (row constraint) iff the value is NOT
+/// among the list's members. The negated counterpart of `list:member`'s
+/// generator, but used as a guard over an already-bound candidate rather
+/// than to generate candidates.
+pub(crate) fn eval_list_not_member(pattern: &Triple, bindings: &Binding) -> Option<Binding> {
+    super::eval_row_constraint(pattern, bindings, |list_id, candidate_id| {
+        match VarOrTerm::list_members(list_id) {
+            Some(members) => !members.contains(&candidate_id),
+            None => false,
+        }
+    })
+}
+
+/// `list:firstRest` -- object is a 2-element `(First Rest)` list; subject
+/// binds to the list formed by prepending `First` onto the list `Rest`
+/// (the "cons" direction real EYE rulesets use this builtin for, e.g.
+/// prepending a newly-visited node onto a graph-search visited-list).
+pub(crate) fn eval_list_first_rest(pattern: &Triple, bindings: &Binding) -> Option<Binding> {
+    if !pattern.s.is_var() {
+        return None;
+    }
+    let subj_var = pattern.s.to_encoded();
+    let cons_for_row = |row: usize| -> Option<usize> {
+        let pair = subject_list_members(&pattern.o, bindings, row)?;
+        if pair.len() != 2 {
+            return None;
+        }
+        let first = pair[0];
+        let rest_members = VarOrTerm::list_members(pair[1])?;
+        let mut combined = Vec::with_capacity(rest_members.len() + 1);
+        combined.push(first);
+        combined.extend(rest_members);
+        Some(ids_to_list(&combined))
+    };
+    if bindings.len() == 0 {
+        let value = cons_for_row(0)?;
+        let mut result = Binding::new();
+        result.add(&subj_var, value);
+        return Some(result);
+    }
+    let mut result = Binding::new();
+    for row in 0..bindings.len() {
+        if let Some(value) = cons_for_row(row) {
+            copy_row(bindings, row, &mut result);
+            result.add(&subj_var, value);
         }
     }
     if result.len() > 0 {

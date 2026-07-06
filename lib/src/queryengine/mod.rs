@@ -43,7 +43,10 @@ impl QueryEngine for SimpleQueryEngine {
                     }
                     None => return None,
                 }
-            } else if let Some(current_bindings) = data.query(&lit.pattern, None) {
+            } else if let Some(current_bindings) = {
+                crate::builtins::reject_if_unsupported_builtin(&lit.pattern.p);
+                data.query(&lit.pattern, None)
+            } {
                 if first {
                     bindings = current_bindings;
                     first = false;
@@ -89,6 +92,7 @@ impl QueryEngine for SimpleQueryEngine {
                     substitute(g);
                 }
 
+                crate::builtins::reject_if_unsupported_builtin(&ground_pattern.p);
                 if data.query(&ground_pattern, triple_counter).is_some() {
                     satisfied = false;
                     break;

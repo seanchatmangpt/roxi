@@ -1,6 +1,6 @@
 # TICKET-004 — Datalog: stratified negation, aggregates, rule safety, and full conformance suite
 
-**Status**: Done — verified 2026-07-05 (`cargo test --workspace` clean: 27/27 datalog tests passing across `datalog_conformance.rs` + submodules, `datalog_negation.rs`, `datalog_challenger.rs`; zero `#[ignore]`d cases)
+**Status**: Done — verified 2026-07-05 (`cargo test --workspace` clean: 37/37 datalog tests passing across `datalog_conformance.rs` + submodules, `datalog_negation.rs`, `datalog_challenger.rs`, `datalog_impossible.rs`, `datalog_stress.rs`, `datalog_stratification_fuzz.rs`; zero `#[ignore]`d cases; manifest at `docs/jira/26.7.4/manifests/datalog_manifest.md` regenerated to match)
 **Size**: XL
 **Depends on**: 001, 002
 **Coordinate with**: 005 (both change `Rule`'s shape in `triples.rs` — land this ticket first or in the same review window to avoid conflicting struct edits)

@@ -1,9 +1,9 @@
 # Datalog Conformance Pass-Rate Manifest
 
 - **Dialect**: Datalog
-- **Suite**: Roxi Datalog Conformance Suite (datalog_conformance.rs + submodules, datalog_negation.rs, datalog_challenger.rs)
-- **Total Tests**: 28
-- **Passed**: 28
+- **Suite**: Roxi Datalog Conformance Suite (datalog_conformance.rs + submodules, datalog_negation.rs, datalog_challenger.rs, datalog_impossible.rs, datalog_stress.rs, datalog_stratification_fuzz.rs)
+- **Total Tests**: 37
+- **Passed**: 37
 - **Failed**: 0
 - **Pass Rate**: 100.0%
 
@@ -39,3 +39,12 @@
 | test_unbound_aggregate_source_var | PASSED | Defined in tests/datalog_challenger.rs |
 | test_boundary_numeric_inputs_aggregation | PASSED | Defined in tests/datalog_challenger.rs |
 | test_aggregate_skips_non_numeric_source_values | PASSED | Defined in tests/datalog_challenger.rs |
+| test_unsafe_negation_wholly_unbound_variable_rejected | PASSED | Defined in tests/datalog_impossible.rs |
+| test_shortest_self_negation_cycle_rejected | PASSED | Defined in tests/datalog_impossible.rs |
+| test_deep_stratification_chain_20_layers | PASSED | Defined in tests/datalog_stress.rs |
+| test_deep_stratification_chain_with_far_cycle_rejected | PASSED | Defined in tests/datalog_stress.rs |
+| test_large_scale_grouped_aggregation | PASSED | Defined in tests/datalog_stress.rs |
+| test_diamond_reconvergence_rejected | PASSED | Defined in tests/datalog_stress.rs |
+| test_multiple_disjoint_cycles_rejected | PASSED | Defined in tests/datalog_stress.rs |
+| test_stratified_negation_over_aggregate_derived_predicate | PASSED | Defined in tests/datalog_stress.rs |
+| nk_stratification_fuzz | PASSED | Defined in tests/datalog_stratification_fuzz.rs |

@@ -73,6 +73,7 @@ pub enum BuiltinKind {
     NotGreaterThan,
     LessThan,
     MathEqualTo,
+    MathNotEqualTo,
     NotEqualTo,
     ListAppend,
     StringLessThan,
@@ -116,6 +117,8 @@ pub enum BuiltinKind {
     ListLast,
     ListMember,
     ListMemberAt,
+    ListNotMember,
+    ListFirstRest,
     ListRemove,
     ListSort,
     ListUnique,
@@ -162,6 +165,54 @@ pub enum BuiltinKind {
     ReasonerLevel,
 }
 
+/// IRI prefixes of namespaces this engine recognizes as N3/EYE *builtin*
+/// vocabularies -- as opposed to ordinary user/application predicates. Used
+/// by `reject_if_unsupported_builtin` to distinguish "this predicate is
+/// trying to invoke a known builtin family this engine doesn't implement"
+/// (which should fail loudly) from "this is just an ordinary predicate with
+/// no matching facts yet" (which is completely normal and must NOT fail).
+const KNOWN_BUILTIN_NAMESPACES: &[&str] = &[
+    "http://www.w3.org/2000/10/swap/log#",
+    "http://www.w3.org/2000/10/swap/math#",
+    "http://www.w3.org/2000/10/swap/string#",
+    "http://www.w3.org/2000/10/swap/list#",
+    "http://www.w3.org/2000/10/swap/time#",
+    "http://www.w3.org/2000/10/swap/crypto#",
+    "http://www.w3.org/2007/rif-builtin-function#",
+    "http://www.w3.org/2007/rif-builtin-predicate#",
+    "http://eulersharp.sourceforge.net/2003/03swap/log-rules#",
+];
+
+/// If `p` names a predicate from a *known* N3/EYE builtin namespace that
+/// this engine does not (or not yet) implement -- e.g. `log:callWithCut`,
+/// `log:repeat`, `e:findall` -- panic with a clear, actionable message
+/// instead of silently falling through to an ordinary (always-empty) EDB
+/// triple lookup. That silent-fallthrough was a real, disclosed gap: rules
+/// depending on an unregistered builtin used to just never fire, with
+/// nothing to distinguish "this fact doesn't exist yet" from "this engine
+/// doesn't understand this predicate at all" (see `lib/tests/n3_conformance/
+/// SKIPPED.md`'s `path-discovery`/`medic`/`ackermann`/etc. entries, each
+/// diagnosed only by manual inspection). Ordinary user predicates (any IRI
+/// outside `KNOWN_BUILTIN_NAMESPACES`) are completely unaffected -- an
+/// unmatched `:hasOwner` pattern is normal Datalog/N3 behavior, not an error.
+pub fn reject_if_unsupported_builtin(p: &VarOrTerm) {
+    if !p.is_term() || classify(p).is_some() {
+        return;
+    }
+    let Some(decoded) = Encoder::decode(&p.to_encoded()) else { return };
+    let iri = decoded.trim_start_matches('<').trim_end_matches('>');
+    if KNOWN_BUILTIN_NAMESPACES.iter().any(|ns| iri.starts_with(ns)) {
+        panic!(
+            "Unsupported N3 builtin predicate: <{}> -- this is a recognized builtin \
+             namespace, but this specific predicate is not implemented by this engine \
+             (see lib/tests/n3_conformance/SKIPPED.md for known examples like \
+             log:callWithCut, log:repeat, e:findall). Refusing to silently treat it as \
+             an ordinary (always-unmatched) fact pattern.",
+            iri
+        );
+    }
+}
+
 /// Identify whether `p` (a body literal's predicate position) names one of
 /// the built-ins handled procedurally by `evaluate`, or a reasoner-level
 /// (fixpoint) builtin handled elsewhere.
@@ -187,6 +238,7 @@ pub fn classify(p: &VarOrTerm) -> Option<BuiltinKind> {
         math::MATH_NOT_GREATER_THAN => BuiltinKind::NotGreaterThan,
         math::MATH_LESS_THAN => BuiltinKind::LessThan,
         math::MATH_EQUAL_TO => BuiltinKind::MathEqualTo,
+        math::MATH_NOT_EQUAL_TO => BuiltinKind::MathNotEqualTo,
         list::LIST_APPEND => BuiltinKind::ListAppend,
         string::STRING_LESS_THAN => BuiltinKind::StringLessThan,
         func::FUNC_LANG_FROM_PLAIN_LITERAL => BuiltinKind::LangFromPlainLiteral,
@@ -229,6 +281,8 @@ pub fn classify(p: &VarOrTerm) -> Option<BuiltinKind> {
         list::LIST_LAST => BuiltinKind::ListLast,
         list::LIST_MEMBER => BuiltinKind::ListMember,
         list::LIST_MEMBER_AT => BuiltinKind::ListMemberAt,
+        list::LIST_NOT_MEMBER => BuiltinKind::ListNotMember,
+        list::LIST_FIRST_REST => BuiltinKind::ListFirstRest,
         list::LIST_REMOVE => BuiltinKind::ListRemove,
         list::LIST_SORT => BuiltinKind::ListSort,
         list::LIST_UNIQUE => BuiltinKind::ListUnique,
@@ -293,6 +347,7 @@ pub fn evaluate(kind: BuiltinKind, pattern: &Triple, bindings: &Binding) -> Opti
         BuiltinKind::NotGreaterThan => math::eval_not_greater_than(pattern, bindings),
         BuiltinKind::LessThan => math::eval_less_than(pattern, bindings),
         BuiltinKind::MathEqualTo => math::eval_math_equal_to(pattern, bindings),
+        BuiltinKind::MathNotEqualTo => math::eval_math_not_equal_to(pattern, bindings),
         BuiltinKind::StringLength => string::eval_string_length(pattern, bindings),
         BuiltinKind::StringConcat => string::eval_string_concat(pattern, bindings),
         BuiltinKind::StringLessThan => string::eval_string_less_than(pattern, bindings),
@@ -339,6 +394,8 @@ pub fn evaluate(kind: BuiltinKind, pattern: &Triple, bindings: &Binding) -> Opti
         BuiltinKind::ListLast => list::eval_list_last(pattern, bindings),
         BuiltinKind::ListMember => list::eval_list_member(pattern, bindings),
         BuiltinKind::ListMemberAt => list::eval_list_member_at(pattern, bindings),
+        BuiltinKind::ListNotMember => list::eval_list_not_member(pattern, bindings),
+        BuiltinKind::ListFirstRest => list::eval_list_first_rest(pattern, bindings),
         BuiltinKind::ListRemove => list::eval_list_remove(pattern, bindings),
         BuiltinKind::ListSort => list::eval_list_sort(pattern, bindings),
         BuiltinKind::ListUnique => list::eval_list_unique(pattern, bindings),

@@ -1242,6 +1242,21 @@ fn validate_shape(
     let default_msg = pick_preferred_message(&messages);
 
     // -----------------------------------------------------------------------
+    // Self-as-property-shape: a PropertyShape can declare its own targets
+    // directly (sh:targetNode/sh:targetClass/etc alongside sh:path), rather
+    // than only ever being reached indirectly via another shape's
+    // sh:property. `validate_property_shape` normally only runs for shapes
+    // reached through `sh:property` below; a shape validated here that
+    // itself has sh:path would otherwise have its own path/minCount/maxCount
+    // constraints silently skipped. Real bug found vendoring the W3C
+    // core/path test suite (path-sequence-001 and siblings): these are all
+    // top-level PropertyShapes with their own sh:targetNode.
+    // -----------------------------------------------------------------------
+    if !get_objects(shapes, shape_node, vocab.sh_path).is_empty() {
+        validate_property_shape(data, shapes, vocab, focus_node, shape_node, results, visited);
+    }
+
+    // -----------------------------------------------------------------------
     // Node-level constraints
     // -----------------------------------------------------------------------
 

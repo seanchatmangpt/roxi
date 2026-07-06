@@ -5,16 +5,32 @@ impl Reasoner {
     /// The IRI of the `log:implies` built-in predicate.
     const LOG_IMPLIES: &'static str = "<http://www.w3.org/2000/10/swap/log#implies>";
 
-    /// Find the (first) non-negated body literal of `rule` whose predicate is
-    /// `log:implies`, if any. Its subject is expected to be bound (at
-    /// evaluation time) to a formula term, and its object is a formula
-    /// written directly in the rule (the consequent template).
-    pub(crate) fn find_log_implies_literal(rule: &Rule) -> Option<usize> {
-        rule.body.iter().position(|lit| {
-            !lit.negated
-                && lit.pattern.p.is_term()
-                && Encoder::decode(&lit.pattern.p.to_encoded()).as_deref() == Some(Self::LOG_IMPLIES)
-        })
+    /// Find *every* non-negated body literal of `rule` whose predicate is
+    /// `log:implies`, in body order. Each such literal's subject is expected
+    /// to be bound (at evaluation time) to a formula term, and its object is
+    /// a formula written directly in the rule (the consequent template).
+    ///
+    /// A rule body may contain more than one `log:implies` literal -- this is
+    /// treated as N independent reified sub-rules sharing the rest of the
+    /// body as their common "outer" bindings (see `process_log_implies_rule`
+    /// for how each is evaluated). This is a deliberate semantic choice, not
+    /// an omission: N3/EYE has no notion of a body literal "consuming" or
+    /// sequencing other body literals, so two `log:implies` literals in one
+    /// body are just two ordinary triple patterns that both happen to use
+    /// the `log:implies` predicate -- each is independently satisfied (or
+    /// not) against the shared outer bindings, exactly as any other pair of
+    /// body literals would be conjoined. There is no ambiguity to reject.
+    pub(crate) fn find_log_implies_literals(rule: &Rule) -> Vec<usize> {
+        rule.body
+            .iter()
+            .enumerate()
+            .filter(|(_, lit)| {
+                !lit.negated
+                    && lit.pattern.p.is_term()
+                    && Encoder::decode(&lit.pattern.p.to_encoded()).as_deref() == Some(Self::LOG_IMPLIES)
+            })
+            .map(|(i, _)| i)
+            .collect()
     }
 
     /// Dynamic rule reification for `log:implies`.
@@ -44,19 +60,24 @@ impl Reasoner {
     /// namespace -- there is no `@forSome`/`@forAll`-style scoping), so e.g.
     /// reusing `?citizen` inside both the quoted antecedent and the rule's
     /// own head is exactly how a variable "threads through" the implication.
+    /// Processes *all* `log:implies` literals in `rule`'s body (see
+    /// `find_log_implies_literals`), each treated as its own independent
+    /// antecedent/consequent pair conjoined with the shared "outer" bindings
+    /// from the rest of the body (i.e. every body literal that is not itself
+    /// one of the `log:implies` literals). Results from every literal are
+    /// pooled together and deduped.
     pub(crate) fn process_log_implies_rule(
         rule: &Rule,
-        implies_idx: usize,
+        implies_indices: &[usize],
         triple_index: &TripleIndex,
     ) -> Vec<Triple> {
         let mut results = Vec::new();
-        let implies_lit = &rule.body[implies_idx];
 
         let regular_body: Vec<BodyLiteral> = rule
             .body
             .iter()
             .enumerate()
-            .filter(|(i, _)| *i != implies_idx)
+            .filter(|(i, _)| !implies_indices.contains(i))
             .map(|(_, lit)| lit.clone())
             .collect();
 
@@ -70,11 +91,14 @@ impl Reasoner {
         };
         let num_outer_rows = if outer_bindings.len() == 0 { 1 } else { outer_bindings.len() };
 
+        for &implies_idx in implies_indices {
+        let implies_lit = &rule.body[implies_idx];
+
         // The consequent is written directly in the rule (the log:implies
         // literal's object), so it never needs a bindings lookup.
         let consequent_id = implies_lit.pattern.o.to_encoded();
         let Some(consequent_triples) = VarOrTerm::formula_triples(consequent_id) else {
-            return results;
+            continue;
         };
 
         for row in 0..num_outer_rows {
@@ -128,6 +152,7 @@ impl Reasoner {
                     results.push(head_t);
                 }
             }
+        }
         }
 
         results

@@ -251,7 +251,7 @@ PathExpr      = { PathHead ~ PathSegment+ }
 // `SameAs` ("=") is Property-position sugar for owl:sameAs (real N3 idiom,
 // e.g. `:a = :b .` meaning `:a owl:sameAs :b .`).
 SameAs   = { "=" }
-Subject  = { PathExpr | IriRef | Prefixed | Var | BlankNode | List | Formula | BNodeProps }
+Subject  = { PathExpr | IriRef | Prefixed | Var | BlankNode | Literal | List | Formula | BNodeProps }
 Property = { IriRef | Prefixed | Var | RdfType | SameAs }
 Object   = { PathExpr | IriRef | Prefixed | Var | BlankNode | Literal | List | Formula | BNodeProps }
 
@@ -288,7 +288,7 @@ BodyLiteral = { ("not" ~ "{" ~ TP ~ "}") | TP }
 // meaning "unconditionally, no antecedent constraints"; TrueBody is its
 // own named rule so n3rule_parser.rs can tell it apart from an ordinary
 // braced body when building the Rule's (empty) body Vec).
-Body = { ("{" ~ BodyLiteral+ ~ "}") | TrueBody }
+Body = { ("{" ~ (ForAll | ForSome | BodyLiteral)+ ~ "}") | TrueBody }
 TrueBody = { "true" }
 
 // Rule head: one or more TPs in braces (multi-head support), or the bare

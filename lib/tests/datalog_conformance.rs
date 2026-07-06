@@ -79,11 +79,14 @@ fn test_datalog_conformance() {
     //
     // Rather than a hand-maintained list of test names (which drifts the
     // moment a test is added/renamed/removed without a matching manual
-    // edit), this scans the actual source of the four files that make up
+    // edit), this scans the actual source of the files that make up
     // the Datalog conformance suite and extracts every `#[test] fn NAME`
     // occurrence directly. The manifest is therefore always in lockstep
     // with reality: run it after adding a test and the new test appears
-    // with no additional bookkeeping required.
+    // with no additional bookkeeping required. NOTE: the file list itself
+    // is still hand-maintained -- adding a wholly new test *file* (as
+    // opposed to a new test inside an existing file) requires adding its
+    // path here too.
     let test_files: &[&str] = &[
         "tests/datalog_conformance.rs",
         "tests/datalog_conformance/safe_unsafe_rejection.rs",
@@ -93,6 +96,9 @@ fn test_datalog_conformance() {
         "tests/datalog_conformance/aggregations.rs",
         "tests/datalog_negation.rs",
         "tests/datalog_challenger.rs",
+        "tests/datalog_impossible.rs",
+        "tests/datalog_stress.rs",
+        "tests/datalog_stratification_fuzz.rs",
     ];
 
     let test_fn_re = regex::Regex::new(r"#\[test\]\s*\n\s*fn\s+(\w+)").unwrap();
@@ -122,7 +128,7 @@ fn test_datalog_conformance() {
     let manifest_report = format!(
         "# Datalog Conformance Pass-Rate Manifest\n\n\
         - **Dialect**: Datalog\n\
-        - **Suite**: Roxi Datalog Conformance Suite (datalog_conformance.rs + submodules, datalog_negation.rs, datalog_challenger.rs)\n\
+        - **Suite**: Roxi Datalog Conformance Suite (datalog_conformance.rs + submodules, datalog_negation.rs, datalog_challenger.rs, datalog_impossible.rs, datalog_stress.rs, datalog_stratification_fuzz.rs)\n\
         - **Total Tests**: {total}\n\
         - **Passed**: {total}\n\
         - **Failed**: 0\n\

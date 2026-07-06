@@ -146,10 +146,11 @@ impl Reasoner {
                                 }
                             }
                         }
-                    } else if let Some(implies_idx) = Self::find_log_implies_literal(rule) {
+                    } else if !Self::find_log_implies_literals(rule).is_empty() {
+                        let implies_indices = Self::find_log_implies_literals(rule);
                         // log:implies dynamic rule reification (see
                         // process_log_implies_rule doc comment).
-                        for new_head in Self::process_log_implies_rule(rule, implies_idx, triple_index) {
+                        for new_head in Self::process_log_implies_rule(rule, &implies_indices, triple_index) {
                             if Self::apply_new_triple(new_head, triple_index, &mut inferred) {
                                 changed = true;
                             }

@@ -8,10 +8,12 @@ This directory contains a hand-converted, vendored slice of the official
 ## Why hand-converted, not verbatim
 
 The official suite's schemas are written in **ShExC** (compact syntax).
-`roxi::shex` (via the vendored `shex_ast`/`shex_validation` crates) only
-accepts **ShExJ** (the JSON syntax for ShEx schemas) — see
-`lib/src/shex.rs::validate_shex`, which calls
-`serde_json::from_str::<shex_ast::ast::Schema>(...)`.
+`roxi::shex` (natively implemented in `lib/src/shex_native.rs`, no external
+ShEx crate) only accepts **ShExJ** (the JSON syntax for ShEx schemas) — see
+`validate_shex_native`, which calls `serde_json::from_str::<Schema>(...)`
+against this crate's own minimal ShExJ AST. Some newer vendored cases use the
+upstream repo's own pre-compiled `schemas/*.json` ShExJ files directly
+(verbatim, no hand-translation needed) rather than converting from `.shex`.
 
 ShExC and ShExJ are two surface syntaxes for the same abstract schema; each
 `cases/<name>/schema.json` here is a manual, field-by-field translation of the

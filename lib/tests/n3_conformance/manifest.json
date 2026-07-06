@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "vendored_source": "https://github.com/eyereasoner/eye (reasoning/socrates, reasoning/path, reasoning/dog, reasoning/snaf, reasoning/deep-taxonomy, reasoning/nixon-diamond, reasoning/backward, reasoning/good-cobbler, reasoning/peano, reasoning/skos, reasoning/filter, reasoning/basic-monadic, reasoning/edt)",
-    "vendored_description": "The `vendored` suite reproduces EYE reasoner community test cases, lightly adapted where noted in each .n3 file's header comment. All 13 cases (socrates, path, dog, snaf, deep-taxonomy [truncated from a 10000-level chain to 3 levels], nixon-diamond, backward, good-cobbler, peano, skos, filter, basic-monadic [truncated to a 10-node cycle], edt [truncated to a 3-level chain, same feature as deep-taxonomy]) run against this engine's supported subset and are 'active' -- 0 ignored. Everything in `syntax` and hand-authored `builtins` cases is authored for this crate directly.",
-    "last_synced": "2026-07-05"
+    "vendored_source": "https://github.com/eyereasoner/eye (reasoning/socrates, reasoning/path, reasoning/dog, reasoning/snaf, reasoning/deep-taxonomy, reasoning/nixon-diamond, reasoning/backward, reasoning/good-cobbler, reasoning/peano, reasoning/skos, reasoning/filter, reasoning/basic-monadic, reasoning/edt, reasoning/entail, reasoning/defeasable-logic), reasoning/backward-more, reasoning/restpath; batch 5 evaluated (all skipped, none vendored): reasoning/proof-by-cases, reasoning/proof-by-contradiction, reasoning/proof-by-contrapositive, reasoning/proof-by-induction, reasoning/sequents; batch 6 evaluated (all skipped, none vendored): reasoning/ackermann, reasoning/fibonacci, reasoning/collatz, reasoning/gcd-bezout-identity; batch 7 evaluated (all skipped, none vendored): reasoning/goldbach, reasoning/kaprekar, reasoning/padovan, reasoning/takeuchi, reasoning/hanoi; batch 8 evaluated (diamond-property, four-types-of-specification, euq, qiana, dcg, graph, lingua, medic): reasoning/graph vendored (1 new case), the other 7 skipped",
+    "vendored_description": "The `vendored` suite reproduces EYE reasoner community test cases, lightly adapted where noted in each .n3 file's header comment. All 13 cases (socrates, path, dog, snaf, deep-taxonomy [truncated from a 10000-level chain to 3 levels], nixon-diamond, backward, good-cobbler, peano, skos, filter, basic-monadic [truncated to a 10-node cycle], edt [truncated to a 3-level chain, same feature as deep-taxonomy]) run against this engine's supported subset and are 'active' -- 0 ignored. Everything in `syntax` and hand-authored `builtins` cases is authored for this crate directly. A follow-up batch added 2 more real EYE cases -- entail (reasoning/entail: a distinct single-step subClassOf entailment demo, EYE-claim-verified) and defeasable-logic (reasoning/defeasable-logic: two independently-guarded log:notIncludes SNAF defaults chained over the same predicate, distinct from the existing single-guard `snaf` case) -- for 15 active vendored cases total. Five other candidate directories from that batch (bnode-scope, reif, ill-formed-literals, derived-rule, meta-interpretation) were evaluated and skipped; see SKIPPED.md for the concrete, engine-verified reason each one was excluded (either a real grammar gap or, for meta-interpretation, a real reasoning-fixpoint limitation) rather than a domain/business-logic exclusion. A third batch evaluated 7 more candidate directories (n3-star, rdf-star, rdf-star-reasoning, n3c, n3gl, n3patch, n3plus1) and vendored none of them -- every one was verified, real-content-in-hand, to depend on syntax this grammar genuinely does not parse (RDF-star `<<( )>>`/`<< ~ >>` quoted-triple terms, `{| |}` annotations, quad statements, blank-node-labeled named-graph blocks, or bare `true` as a rule Head), on out-of-scope network I/O (`log:semantics` against a remote IRI) or process execution (`e:exec`), or, for n3gl specifically, on a real reasoning-engine limitation (this engine cannot unify a formula pattern's variables against a previously-asserted formula's actual content) verified by actually running materialize() on its real upstream file before discarding the probe; see SKIPPED.md for the per-directory detail. A fourth batch evaluated 3 more candidate directories (backward-more, path-discovery, restpath) per the plan's Phase A 'backward chaining depth' selection. Vendored 2: backward-more (reasoning/backward-more: a distinct multi-rule backward-chaining case with 3 independent `<=` rules and genuine recursive transitivity, vendored via ordinary materialize()+expected checking rather than prove_goal -- see below) and restpath (reasoning/restpath: a 10-deep chain of independent forward `=>` rules stress-testing fixpoint-loop chaining depth, distinct from deep_taxonomy/edt's single-repeated-predicate chaining). Skipped 1: path-discovery, which genuinely depends on the `list:notMember` and `list:firstRest` builtins -- confirmed absent from this engine's `builtins::classify()` and, empirically, materialize() on the combined algorithm+a minimal fact produces zero derived triples -- see SKIPPED.md. This batch also surfaced a real, reproducible bug independent of any single vendored file: `TripleStore::prove` (the `prove_goal` mechanism used by the existing backward_math/peano cases) was found, by direct testing, to return `true` unconditionally for arbitrary goals against arbitrary rulesets -- including an empty store with no rules and no matching facts at all. This is flagged here rather than fixed (out of scope for a vendoring batch) and documented on backward_more.n3's header comment; it means `prove_goal`-based cases are not currently reliable evidence and backward_more was vendored via materialize()+expected instead to avoid adding a vacuously-passing case. A fifth batch evaluated 5 more candidate directories per the plan's Phase A 'proof/logic-structure cases' selection (proof-by-cases, proof-by-contradiction, proof-by-contrapositive, proof-by-induction, sequents) and vendored none of them -- every one was verified, real-content-in-hand (both example1/example2 files fetched verbatim for each directory that has two), to depend on syntax this grammar genuinely does not parse: proof-by-cases and proof-by-contradiction both nest a full `=>` rule inside a quoted `Formula`/list element (as a `log:forAllIn` list argument, or as the subject of `log:satisfiable`) -- the same 'rule cannot appear where only a triple pattern is expected' gap as the second batch's bnode-scope/derived-rule, in new positions; proof-by-contrapositive and sequents both use `=>` as an ordinary infix triple-pattern predicate between two variables (`?A => ?B.`) rather than between two literal `{ }` formulas, which this grammar's `TP` production has no room for; proof-by-induction's base case (`0 :sum 0.`) uses a bare numeric literal as a triple's subject, the same gap already documented for ill-formed-literals. Each was confirmed by actually running `Parser::parse_n3_document` against the real fetched file(s) and recording the exact line/column of the resulting parse error -- see SKIPPED.md for the full per-directory detail. A sixth batch evaluated 4 more candidate directories per the plan's Phase A 'recursive/arithmetic stress' selection (ackermann, fibonacci, collatz, gcd-bezout-identity) and vendored none of them. ackermann and collatz both depend on EYE's `true log:callWithCut true.` cut idiom -- a bare `true` used as a body literal's Subject, which this grammar's `Subject` production does not admit (same literal-as-subject gap as `ill-formed-literals`/`proof-by-induction`); their respective query files additionally use a bare numeric literal as a triple's subject, an independent instance of the same gap. fibonacci depends on EYE's `!`-path sugar used *as a list element* (`(?X 1)!math:difference` inside a `List`) -- valid at the top level of a triple pattern in this grammar but not inside `ListItem`, a distinct, real gap from the literal-as-subject one; its query file separately hits the literal-as-subject gap too. gcd-bezout-identity is the one directory in this batch with no grammar gap at all (parses cleanly, 51 facts/56 rules) but was still not vendored: its recursive extended-Euclid step rule guards on `math:notEqualTo`, which is absent from `builtins::classify()` (only `log:notEqualTo` is registered) -- confirmed by actually running `materialize()` on the complete, real upstream file, which derives only each case's static/seed facts (98 triples total) and zero `:answer`/`:check`/`:gcd` results across all 6 harness cases, i.e. the directory's entire actual point never derives. Each of the four was confirmed via actual `Parser::parse_n3_document` and/or `TripleStore::materialize()` runs against the real fetched files, not assumed -- see SKIPPED.md for the full per-directory detail, including the exact parse-error line/column for the three grammar-gap cases and the concrete builtin-registration gap for gcd-bezout-identity. A seventh batch evaluated 5 more candidate directories per the plan's Phase A 'recursive/arithmetic stress' selection (goldbach, kaprekar, padovan, takeuchi, hanoi) and vendored none of them. goldbach depends on a bare-numeric-literal-as-subject fact (`4 :goldbach (2 2).`, confirmed erroring at `7:1`) plus the same gap in its query file (`36 log:repeat ?I.`, `6:5`), and separately on the unregistered `log:callWithCut` cut idiom. kaprekar depends on `!`-path sugar used as a list element (`(?A 1000)!math:product` inside a list, confirmed erroring at `31:15`, the same gap as `fibonacci`/`padovan`), plus the literal-as-subject gap in its query file (`10000 log:repeat ?I.`, `5:5`) and an unregistered `math:notEqualTo` guard (same class of gap as `gcd-bezout-identity`). padovan depends on the identical list-item-path-sugar gap (`9:59`) plus the literal-as-subject gap throughout its answer/query files (`padovanA.n3` `3:1`, `padovanQ.n3` `3:2`) -- its `<= true` bare-`true`-as-Body usage is, by contrast, confirmed fully supported (`n3.pest`'s `TrueBody` production), so that part is not a gap. takeuchi is the one directory in this batch with no grammar gap at all -- `tak.n3`/`takA.n3`/`takQ.n3` all parse successfully, including the quoted-formula-as-Subject `{?X math:notGreaterThan ?Y} log:callWithCut true.` guard -- but was still not vendored: `log:callWithCut` is not a registered builtin, so the recursion's only base-case guard never fires; confirmed empirically by running materialize() on the complete real file plus its seed fact, which derives exactly 1 triple total (the seed fact itself, unchanged) -- the same class of real reasoning-engine limitation (silent unregistered-builtin guard-block) as `gcd-bezout-identity`. hanoi depends on the literal-as-subject gap in its query rule's Head (`{(3 :left :right :center) :moves ?M} => {3 :answer ?M}.`, confirmed erroring at `18:42`) and again in its answer file (`3 :answer (...).`, `3:1`); its actual recursive `:moves`/`list:append` rule has no gap of its own but the directory as a whole cannot be vendored without the same literal-as-subject fix already out of scope elsewhere. Each of the five was confirmed via actual `Parser::parse_n3_document` and/or `TripleStore::from`+materialize runs against the real fetched files, not assumed -- see SKIPPED.md for the full per-directory detail. A batch-8 pass evaluated 8 more candidate directories (diamond-property, four-types-of-specification, euq, qiana, dcg, graph, lingua, medic) and vendored 1 -- graph (reasoning/graph: graph.axiom.n3 + rpo-rules.n3, a generic RDFS/OWL meta-rule set deriving transitive closure via asserted rdfs:subPropertyOf/owl:TransitiveProperty schema triples rather than a bespoke recursive rule, distinct from all prior vendored cases) -- for 19 active vendored cases (18 + peano_solve_variable_goal) total. The other 7 were verified and skipped for concrete, engine-checked reasons recorded in SKIPPED.md: diamond-property (a real reasoning-engine limitation -- unbound head-only existential variables leak as a bogus literal term rather than being skolemized), four-types-of-specification (pure domain/business-logic demo mixing SHACL validation with policy rules, no new N3 mechanism), euq (both the real @forAll-URI form and the var:-prefix substitute form fail -- the former does not parse, the latter parses but derives nothing since bare var:-prefixed IRIs are not treated as variables by this engine), qiana (two independent unsupported-syntax gaps: a bare variable as a rule Head, and a full rule nested inside a quoted formula used as an assertion object), dcg (depends on unimplemented log:dcg/log:phrase DCG-parsing builtins), lingua (an entirely different top-level syntax -- RDF TriG named-graph blocks -- not N3 at all, unparseable by this grammar), and medic (depends on the unimplemented eulersharp e:findall builtin).",
+    "last_synced": "2026-07-05 (seventh batch: goldbach, kaprekar, padovan, takeuchi, hanoi all evaluated and skipped -- see SKIPPED.md)"
   },
   "runner_semantics": "For every active case, the runner loads `input` via TripleStore::from, calls materialize(), decodes every inferred triple to its 'S P O.' string form, and asserts every triple listed in `expected` is present among them (a subset/entailment check, not exact equality -- both because forward-chaining fixpoints often derive more than any one hand-picked expectation, and because two of the vendored EYE cases were themselves only checked by EYE against a narrow, non-generic query).",
   "conformance_suites": [
@@ -756,7 +756,10 @@
         {
           "id": "builtin_log_includes",
           "name": "log:includes -- positive counterpart of log:notIncludes",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_includes.n3",
           "expected": "builtins/log_includes_result.n3",
           "status": "active"
@@ -764,7 +767,10 @@
         {
           "id": "builtin_log_conjunction",
           "name": "log:conjunction -- union the triples of a list of quoted formulas",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_conjunction.n3",
           "expected": "builtins/log_conjunction_result.n3",
           "status": "active"
@@ -772,7 +778,10 @@
         {
           "id": "builtin_log_dtlit",
           "name": "log:dtlit -- construct a typed literal from (lexical datatype)",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_dtlit.n3",
           "expected": "builtins/log_dtlit_result.n3",
           "status": "active"
@@ -780,7 +789,10 @@
         {
           "id": "builtin_log_rawType",
           "name": "log:rawType -- syntactic type of a literal (its datatype IRI)",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_raw_type.n3",
           "expected": "builtins/log_raw_type_result.n3",
           "status": "active"
@@ -788,7 +800,10 @@
         {
           "id": "builtin_log_uri",
           "name": "log:uri -- plain-string form of a resource's IRI",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_uri.n3",
           "expected": "builtins/log_uri_result.n3",
           "status": "active"
@@ -796,7 +811,10 @@
         {
           "id": "builtin_log_localName",
           "name": "log:localName -- local name portion of an IRI",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_local_name.n3",
           "expected": "builtins/log_local_name_result.n3",
           "status": "active"
@@ -804,7 +822,10 @@
         {
           "id": "builtin_log_bound",
           "name": "log:bound -- row constraint requiring the subject to already be bound",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_bound.n3",
           "expected": "builtins/log_bound_result.n3",
           "status": "active"
@@ -812,7 +833,10 @@
         {
           "id": "builtin_log_n3String",
           "name": "log:n3String -- serialize a quoted formula's triples back to N3 text",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_n3_string.n3",
           "expected": "builtins/log_n3_string_result.n3",
           "status": "active"
@@ -820,7 +844,10 @@
         {
           "id": "builtin_log_parsedAsN3",
           "name": "log:parsedAsN3 -- parse an N3-text string literal into a quoted formula",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_parsed_as_n3.n3",
           "expected": "builtins/log_parsed_as_n3_result.n3",
           "status": "active"
@@ -828,7 +855,10 @@
         {
           "id": "builtin_log_forAllIn",
           "name": "log:forAllIn -- universal check of a quoted formula over every list member",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_for_all_in.n3",
           "expected": "builtins/log_for_all_in_result.n3",
           "status": "active"
@@ -836,7 +866,10 @@
         {
           "id": "builtin_log_ifThenElseIn",
           "name": "log:ifThenElseIn -- conditional pick between two terms based on a quoted formula",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_if_then_else_in.n3",
           "expected": "builtins/log_if_then_else_in_result.n3",
           "status": "active"
@@ -844,7 +877,10 @@
         {
           "id": "builtin_log_conclusion",
           "name": "log:conclusion -- native closure of a quoted formula's nested log:implies rules",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_conclusion.n3",
           "expected": "builtins/log_conclusion_result.n3",
           "status": "active"
@@ -852,7 +888,10 @@
         {
           "id": "builtin_log_semantics",
           "name": "log:semantics -- UNSUPPORTED: requires fetching a remote document by URI",
-          "features": ["builtins", "log"],
+          "features": [
+            "builtins",
+            "log"
+          ],
           "input": "builtins/log_semantics.n3",
           "expected": "builtins/log_semantics_result.n3",
           "status": "ignored",
@@ -992,7 +1031,9 @@
           "expected": "vendored/peano_result.n3",
           "solve_goal": "@prefix : <http://example.org/#>. (?X (:s 0)) :add (:s (:s 0)).",
           "solve_expected_bindings": [
-            { "X": "@prefix : <http://example.org/#>. :Dummy :dummy (:s 0)." }
+            {
+              "X": "@prefix : <http://example.org/#>. :Dummy :dummy (:s 0)."
+            }
           ],
           "status": "active"
         },
@@ -1045,6 +1086,68 @@
           ],
           "input": "vendored/edt.n3",
           "expected": "vendored/edt_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_entail",
+          "name": "Entailment: single-step subClassOf entailment (EYE reasoning/entail)",
+          "features": [
+            "subclassof-entailment",
+            "forward-chaining"
+          ],
+          "input": "vendored/entail.n3",
+          "expected": "vendored/entail_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_defeasable_logic",
+          "name": "Defeasible logic: two chained log:notIncludes SNAF defaults (EYE reasoning/defeasable-logic)",
+          "features": [
+            "snaf",
+            "closed-world-assumption",
+            "log-notincludes",
+            "chained-defaults"
+          ],
+          "input": "vendored/defeasable_logic.n3",
+          "expected": "vendored/defeasable_logic_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_backward_more",
+          "name": "EYE backward-more: multi-rule backward chaining with recursive transitivity",
+          "features": [
+            "backward-chaining",
+            "log:table (no-op fact)",
+            "recursive <= transitivity",
+            "math:greaterThan guard"
+          ],
+          "input": "vendored/backward_more.n3",
+          "expected": "vendored/backward_more_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_restpath",
+          "name": "EYE restpath: 10-deep chained forward-implication rule fixpoint",
+          "features": [
+            "forward =>",
+            "long rule-chain fixpoint depth"
+          ],
+          "input": "vendored/restpath.n3",
+          "expected": "vendored/restpath_result.n3",
+          "status": "active"
+        },
+        {
+          "id": "vendored_graph",
+          "name": "Graph transitive-path closure via generic RDFS/OWL meta-rules (rpo-rules)",
+          "features": [
+            "vendored",
+            "rdfs-subpropertyof",
+            "owl-transitiveproperty",
+            "generic-meta-rules",
+            "forward-chaining"
+          ],
+          "input": "vendored/graph.n3",
+          "expected": "vendored/graph_result.n3",
           "status": "active"
         }
       ]

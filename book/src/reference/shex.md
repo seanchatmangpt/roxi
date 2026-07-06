@@ -6,7 +6,7 @@ Shape Expressions (ShEx) is an RDF validation language focused on graph topology
 
 ShEx is widely used in bioinformatics (e.g. genomic graphs) and library databases where graphs contain deep, recursive networks of relationships.
 
-In Roxi, the ShEx validation pipeline evaluates shape constraints against the `TripleIndex` by mapping structures through the `oxrdf` zero-copy adapter and running validation checks via `shex_validation`.
+In Roxi, the ShEx validation pipeline (`lib/src/shex_native.rs`, re-exported from `lib/src/shex.rs`) is a fully native implementation operating directly on `TripleIndex` -- no external ShEx crate and no `oxrdf` conversion step. An earlier version delegated to external `shex_ast`/`shex_validation` crates; that was replaced after fuzzing found a real spec violation in their `OneOf` handling (a satisfied alternative plus an unrelated "extra" predicate on a non-CLOSED shape was wrongly rejected). Owning the validation logic natively -- mirroring `shacl.rs`, which was native from the start -- closed that gap and removed the "unverified because it's someone else's code" risk.
 
 ---
 
@@ -57,92 +57,48 @@ Validation of deep, circular graph models requires tracking evaluation states:
 
 ## 4. Rust Integration Reference
 
-Below is the Rust structural design of the ShEx schema representations and state tracking in Roxi:
+The real public entry point and AST, from `lib/src/lib.rs` and `lib/src/shex_native.rs`:
 
 ```rust
-use std::collections::HashMap;
-
-#[derive(Debug, Clone)]
-pub enum NodeConstraint {
-    Datatype(String),
-    NodeKind(String),
-}
-
-#[derive(Debug, Clone)]
-pub enum ShapeExpr {
-    NodeConstraint(NodeConstraint),
-    TripleConstraint {
-        predicate: String,
-        min: usize,
-        max: Option<usize>,
-        value_expr: Option<Box<ShapeExpr>>,
-    },
-    EachOf {
-        expressions: Vec<ShapeExpr>,
-    },
-    ShapeRef(String), // Reference to another shape
+impl TripleStore {
+    /// Validates this store's data against a ShExJ schema and a shape map
+    /// (a list of `(focus_node_iri, shape_id)` pairs).
+    pub fn validate_shex(
+        &self,
+        schema_json: &str,
+        shape_map: &[(String, String)],
+    ) -> Result<shex::ShexValidationReport, String>;
 }
 
 pub struct Schema {
-    pub shapes: HashMap<String, ShapeExpr>,
+    pub shapes: Vec<ShapeDecl>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ValidationResult {
-    Conforms,
-    Violates,
-    Evaluating, // Used to detect recursive cycles
+pub struct ShapeDecl {
+    pub id: String,
+    pub shape_expr: ShapeExpr,
 }
 
-pub struct ShExValidator {
-    pub schema: Schema,
+/// A shape-expression position may hold either an inline expression or a
+/// bare-string reference to another top-level `ShapeDecl` by its `id`.
+pub enum ShapeExprOrRef {
+    Ref(String),
+    Expr(ShapeExpr),
 }
 
-impl ShExValidator {
-    /// Validates a node against a shape, handling recursive cycles safely
-    pub fn validate_node(
-        &self,
-        node: &str,
-        shape_name: &str,
-        state: &mut HashMap<(String, String), ValidationResult>,
-    ) -> ValidationResult {
-        let key = (node.to_string(), shape_name.to_string());
+pub enum ShapeExpr {
+    Shape { closed: bool, extra: Vec<String>, expression: Option<TripleExpr> },
+    ShapeAnd { shape_exprs: Vec<ShapeExprOrRef> },
+    ShapeOr { shape_exprs: Vec<ShapeExprOrRef> },
+    ShapeNot { shape_expr: Box<ShapeExprOrRef> },
+    NodeConstraint { /* nodeKind, datatype, facets, values */ },
+}
 
-        // 1. Detect recursive cycle
-        if let Some(&status) = state.get(&key) {
-            if status == ValidationResult::Evaluating {
-                // Assume conforms inside a cycle to allow termination
-                return ValidationResult::Conforms;
-            }
-            return status;
-        }
-
-        // 2. Mark state as evaluating
-        state.insert(key.clone(), ValidationResult::Evaluating);
-
-        let shape_expr = match self.schema.shapes.get(shape_name) {
-            Some(expr) => expr,
-            None => {
-                state.insert(key, ValidationResult::Violates);
-                return ValidationResult::Violates;
-            }
-        };
-
-        // 3. Evaluate shape expression
-        let result = self.evaluate_expression(node, shape_expr, state);
-        state.insert(key, result);
-
-        result
-    }
-
-    fn evaluate_expression(
-        &self,
-        _node: &str,
-        _expr: &ShapeExpr,
-        _state: &mut HashMap<(String, String), ValidationResult>,
-    ) -> ValidationResult {
-        // Mock evaluation implementation
-        ValidationResult::Conforms
-    }
+pub enum TripleExpr {
+    TripleConstraint { predicate: String, value_expr: Option<Box<ShapeExprOrRef>>, min: Option<i64>, max: Option<i64> },
+    EachOf { expressions: Vec<TripleExpr> },
+    OneOf { expressions: Vec<TripleExpr> },
 }
 ```
+
+Cycle safety uses a `HashSet<(usize focus_node, String shape_label)>` visited-set exactly like `shacl.rs::validate_shape`'s own cycle guard (see `validate_ref` in `shex_native.rs`): re-entering an already-active `(focus, shape)` pair short-circuits to success rather than recursing forever, so mutually- or self-referential shapes terminate.

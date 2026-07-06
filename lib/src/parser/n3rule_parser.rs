@@ -1157,44 +1157,71 @@ fn parse_document_body(document: Pair<Rule>) -> Result<(Vec<Triple>, Vec<Reasone
                     let mut head_triples: Vec<Triple> = Vec::new();
                     let mut is_deny_head = false;
 
-                    for part in variant.into_inner() {
-                        match part.as_rule() {
-                            Rule::Body => {
-                                for bl_pair in part.into_inner() {
-                                    // `true` (TrueBody) means "unconditionally
-                                    // true, no antecedent constraints" -- a
-                                    // real EYE corpus idiom (e.g. the `peano`
-                                    // case's `{(?A 0) :add ?A} <= true.`);
-                                    // contributes zero body literals.
-                                    if bl_pair.as_rule() == Rule::TrueBody {
-                                        continue;
-                                    }
-                                    // bl_pair is a BodyLiteral
-                                    let is_negated = bl_pair.as_str().trim_start().starts_with("not");
-                                    // Find the TP inside the BodyLiteral
-                                    let tp_pair = bl_pair
-                                        .into_inner()
-                                        .find(|p| p.as_rule() == Rule::TP)
-                                        .expect("BodyLiteral must contain a TP");
-                                    let patterns = parse_tp(tp_pair.into_inner(), &prefix_mapper);
-                                    for pattern in patterns {
-                                        body.push(BodyLiteral { negated: is_negated, pattern });
+                    let parts: Vec<Pair<Rule>> = variant.into_inner().collect();
+
+                    // The rule's antecedent (Body) is itself a formula per the
+                    // N3 CG spec, so `@forAll`/`@forSome` may be declared
+                    // directly inside its braces (e.g. `{ @forAll ?x . ?x a
+                    // :Dog } => { ?x a :Mammal }.`), scoped to this rule (body
+                    // + head). Push a fresh scope for the whole rule and
+                    // pre-register any such declarations before parsing the
+                    // body/head triples, matching the pre-pass pattern used
+                    // for `Formula` and the document root.
+                    with_new_scope(|| {
+                        for part in &parts {
+                            if part.as_rule() == Rule::Body {
+                                for bl_pair in part.clone().into_inner() {
+                                    if bl_pair.as_rule() == Rule::ForAll || bl_pair.as_rule() == Rule::ForSome {
+                                        register_quantifier_declarations(&bl_pair);
                                     }
                                 }
                             }
-                            Rule::Head => {
-                                for tp_pair in part.into_inner() {
-                                    if tp_pair.as_rule() == Rule::TP {
-                                        head_triples.extend(parse_tp(tp_pair.into_inner(), &prefix_mapper));
-                                    } else if tp_pair.as_rule() == Rule::DenyHead {
-                                        is_deny_head = true;
-                                    }
-                                }
-                            }
-                            Rule::EOI => {}
-                            _ => {}
                         }
-                    }
+
+                        for part in parts {
+                            match part.as_rule() {
+                                Rule::Body => {
+                                    for bl_pair in part.into_inner() {
+                                        // Declarations were already registered
+                                        // in the pre-pass above.
+                                        if bl_pair.as_rule() == Rule::ForAll || bl_pair.as_rule() == Rule::ForSome {
+                                            continue;
+                                        }
+                                        // `true` (TrueBody) means "unconditionally
+                                        // true, no antecedent constraints" -- a
+                                        // real EYE corpus idiom (e.g. the `peano`
+                                        // case's `{(?A 0) :add ?A} <= true.`);
+                                        // contributes zero body literals.
+                                        if bl_pair.as_rule() == Rule::TrueBody {
+                                            continue;
+                                        }
+                                        // bl_pair is a BodyLiteral
+                                        let is_negated = bl_pair.as_str().trim_start().starts_with("not");
+                                        // Find the TP inside the BodyLiteral
+                                        let tp_pair = bl_pair
+                                            .into_inner()
+                                            .find(|p| p.as_rule() == Rule::TP)
+                                            .expect("BodyLiteral must contain a TP");
+                                        let patterns = parse_tp(tp_pair.into_inner(), &prefix_mapper);
+                                        for pattern in patterns {
+                                            body.push(BodyLiteral { negated: is_negated, pattern });
+                                        }
+                                    }
+                                }
+                                Rule::Head => {
+                                    for tp_pair in part.into_inner() {
+                                        if tp_pair.as_rule() == Rule::TP {
+                                            head_triples.extend(parse_tp(tp_pair.into_inner(), &prefix_mapper));
+                                        } else if tp_pair.as_rule() == Rule::DenyHead {
+                                            is_deny_head = true;
+                                        }
+                                    }
+                                }
+                                Rule::EOI => {}
+                                _ => {}
+                            }
+                        }
+                    });
 
                     if is_deny_head {
                         rules.push(ReasonerRule::new_denial(body.clone()));

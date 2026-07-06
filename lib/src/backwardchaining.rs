@@ -341,7 +341,9 @@ impl BackwardChainer {
     /// "zero rows").
     pub fn solve(triple_index: &TripleIndex, rule_index: &RuleIndex, goal_pattern: &Triple) -> Vec<Binding> {
         let mut history = std::collections::HashSet::new();
-        let raw = Self::solve_inner(triple_index, rule_index, goal_pattern, &mut history, 0);
+        let Some(raw) = Self::solve_inner(triple_index, rule_index, goal_pattern, &mut history, 0) else {
+            return Vec::new();
+        };
         let goal_vars = Self::collect_vars(goal_pattern);
         let mut rows = Self::binding_to_rows(raw);
         for row in rows.iter_mut() {
@@ -378,25 +380,38 @@ impl BackwardChainer {
             .collect()
     }
 
+    /// Returns `None` when the goal is not provable at all, and
+    /// `Some(binding)` when it is -- `binding` may itself have zero columns
+    /// (a ground success), which is why success/failure is tracked via this
+    /// `Option` wrapper rather than `Binding::len() == 0` (that would be
+    /// ambiguous between "zero rows" and "one row, zero columns", exactly
+    /// the ambiguity `solve`'s doc comment above warns about). This was a
+    /// real bug fixed by an independent adversarial review: previously this
+    /// returned a bare `Binding`, so a goal reducing to a *failed* ground
+    /// builtin check (e.g. `3 math:greaterThan 5`) and a goal reducing to a
+    /// *successful* ground builtin check (`5 math:greaterThan 3`) both ended
+    /// up represented by the same zero-column `Binding::new()`, and
+    /// `TripleStore::prove`/`solve` reported both as proven.
     fn solve_inner(
         triple_index: &TripleIndex,
         rule_index: &RuleIndex,
         goal: &Triple,
         history: &mut std::collections::HashSet<Triple>,
         depth: usize,
-    ) -> Binding {
+    ) -> Option<Binding> {
         if depth > Self::MAX_SOLVE_DEPTH {
             warn!(
                 "BackwardChainer::solve: recursion depth limit ({}) exceeded for goal {:?}",
                 Self::MAX_SOLVE_DEPTH,
                 TripleStore::decode_triple(goal)
             );
-            return Binding::new();
+            return None;
         }
         if !history.insert(goal.clone()) {
-            return Binding::new();
+            return None;
         }
 
+        let mut any_success = false;
         let mut all_bindings = Binding::new();
 
         // Direct facts / N3 builtins for this (possibly variable-containing)
@@ -404,9 +419,14 @@ impl BackwardChainer {
         // already handle variable (including list-pattern) goals natively.
         if let Some(kind) = crate::builtins::classify(&goal.p) {
             if let Some(b) = crate::builtins::evaluate(kind, goal, &Binding::new()) {
+                any_success = true;
                 all_bindings.combine(b);
             }
-        } else if let Some(b) = triple_index.query(goal, None) {
+        } else if let Some(b) = {
+            crate::builtins::reject_if_unsupported_builtin(&goal.p);
+            triple_index.query(goal, None)
+        } {
+            any_success = true;
             all_bindings.combine(b);
         }
 
@@ -444,6 +464,7 @@ impl BackwardChainer {
             for body_lit in &substituted_body {
                 if body_lit.negated {
                     // Negation as EDB failure, mirroring `prove_inner`.
+                    crate::builtins::reject_if_unsupported_builtin(&body_lit.pattern.p);
                     if triple_index.contains(&body_lit.pattern) {
                         rule_failed = true;
                         break;
@@ -451,22 +472,25 @@ impl BackwardChainer {
                     continue;
                 }
 
+                crate::builtins::reject_if_unsupported_builtin(&body_lit.pattern.p);
+                let mut lit_success = false;
                 let mut lit_bindings = Binding::new();
                 if let Some(result_bindings) = triple_index.query(&body_lit.pattern, None) {
+                    lit_success = true;
                     lit_bindings.combine(result_bindings);
                 }
-                let recursive_bindings =
-                    Self::solve_inner(triple_index, rule_index, &body_lit.pattern, history, depth + 1);
-                if recursive_bindings.len() > 0 {
+                if let Some(recursive_bindings) =
+                    Self::solve_inner(triple_index, rule_index, &body_lit.pattern, history, depth + 1)
+                {
+                    lit_success = true;
                     lit_bindings.combine(recursive_bindings);
                 }
 
-                rule_bindings = rule_bindings.join(&lit_bindings);
-
-                if lit_bindings.len() == 0 {
+                if !lit_success {
                     rule_failed = true;
                     break;
                 }
+                rule_bindings = rule_bindings.join(&lit_bindings);
             }
             if rule_failed {
                 continue;
@@ -492,11 +516,15 @@ impl BackwardChainer {
                 rule_bindings.combine(head_only);
             }
 
+            any_success = true;
             all_bindings.combine(rule_bindings);
         }
 
         history.remove(goal);
-        all_bindings
+        if !any_success {
+            return None;
+        }
+        Some(all_bindings)
     }
 
     /// Chase-based unification of two (possibly variable-containing) terms,

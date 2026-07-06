@@ -272,3 +272,97 @@ fn test_forall_in_sibling_formulas_does_not_collide() {
         "the same bare name '?x', explicitly @forAll-quantified in two SIBLING formulas, must resolve to two distinct variables, not collide"
     );
 }
+
+/// `@forAll`/`@forSome` declared directly INSIDE a rule's own antecedent
+/// braces (a `forward_rule`'s `Body`) must parse, not be rejected as a hard
+/// syntax error. A rule's antecedent graph is itself a formula per the N3 CG
+/// spec, so `{ @forAll ?x . ?x a :Dog } => { ?x a :Mammal }.` is a legitimate,
+/// commonly-used idiom for self-contained portable N3 rules -- previously
+/// `n3.pest`'s `Body` production only allowed `BodyLiteral`s inside the
+/// antecedent braces (unlike the sibling `Formula` production, which already
+/// allowed `ForAll`/`ForSome` alongside `TP`), so this failed with a hard
+/// pest parse error ("expected Object") rather than either accepting the
+/// quantifier or giving a semantic error.
+#[test]
+fn test_forall_declared_inside_rule_antecedent_braces_parses_and_scopes() {
+    let input = "@prefix : <http://example.org/> .\n\
+                 { @forAll ?x . ?x a :Dog } => { ?x a :Mammal }.";
+
+    let rules = Parser::parse_rules(input).expect("@forAll inside a rule's own antecedent braces must parse");
+    assert_eq!(1, rules.len());
+    assert_eq!(1, rules[0].body.len());
+
+    let body_subj = &rules[0].body[0].pattern.s;
+    let head_subj = &rules[0].head.s;
+    assert!(body_subj.is_var(), "@forAll ?x must remain a variable (universally quantified)");
+    assert!(head_subj.is_var(), "@forAll ?x must remain a variable (universally quantified)");
+    assert_eq!(
+        body_subj.to_encoded(),
+        head_subj.to_encoded(),
+        "the @forAll-declared ?x must be the SAME variable across this rule's body and head (scoped to the whole rule, not just the antecedent formula)"
+    );
+
+    // The declaration must actually take effect (real per-rule scoping), not
+    // merely parse-and-ignore: an independently-parsed second rule that
+    // declares @forAll for the same bare name in its own antecedent braces
+    // must not collide with the first rule's variable.
+    let input2 = "@prefix : <http://example.org/> .\n\
+                  { @forAll ?x . ?x a :Cat } => { ?x a :Mammal }.";
+    let rules2 = Parser::parse_rules(input2).expect("second independent @forAll-in-antecedent rule should parse");
+    assert_ne!(
+        rules[0].body[0].pattern.s.to_encoded(),
+        rules2[0].body[0].pattern.s.to_encoded(),
+        "@forAll ?x declared in two independently-parsed rules' antecedents must not collide"
+    );
+}
+
+/// Intra-rule multi-`log:implies`: a SINGLE rule body containing TWO
+/// independent `log:implies` literals (each with its own quoted antecedent
+/// formula, matched via a distinct `:says*` fact, and its own quoted
+/// consequent) must derive the conclusions of BOTH, not just the first one
+/// found by a naive `.position(...)`-based scan.
+///
+/// This locks in the chosen semantics (see `find_log_implies_literals`'s
+/// doc comment in `lib/src/reasoner/log_implies.rs`): two `log:implies`
+/// literals in one body are two ordinary, independently-evaluated body
+/// literals that both happen to use the `log:implies` predicate, conjoined
+/// with the shared "outer" bindings from the rest of the body -- not a
+/// sequencing/consuming relationship, and not rejected as ambiguous.
+///
+/// Before the fix, `find_log_implies_literal` located only the first
+/// `log:implies` literal and left the second in the "regular" (ordinary
+/// query) body, where its pattern (`?f2 log:implies { ... }`) can never
+/// match an actually-asserted triple -- so the outer-binding query failed
+/// entirely and NEITHER conclusion (not even the first) was derived.
+#[test]
+fn test_two_independent_log_implies_literals_in_one_rule_body() {
+    let data = "@prefix : <http://example.org/> .\n\
+                @prefix log: <http://www.w3.org/2000/10/swap/log#> .\n\
+                \n\
+                :bob a :GoodCitizen .\n\
+                :carol a :Employed .\n\
+                :alice :saysA { ?citizen a :GoodCitizen } .\n\
+                :dave :saysB { ?worker a :Employed } .\n\
+                { :alice :saysA ?f1 . ?f1 log:implies { ?citizen a :TaxPayer } .\n\
+                  :dave :saysB ?f2 . ?f2 log:implies { ?worker a :Worker } } => { :multi :log_implies :triggered }.\n";
+
+    let mut store = TripleStore::from(data);
+    let inferred = store.materialize();
+    let decoded = decode_all(&inferred);
+
+    assert!(
+        decoded.iter().any(|d| d.contains("/bob") && d.contains("TaxPayer")),
+        "expected :bob a :TaxPayer from the FIRST log:implies literal. Derived: {:?}",
+        decoded
+    );
+    assert!(
+        decoded.iter().any(|d| d.contains("/carol") && d.contains("Worker")),
+        "expected :carol a :Worker from the SECOND, independent log:implies literal in the same rule body. Derived: {:?}",
+        decoded
+    );
+    assert!(
+        decoded.iter().any(|d| d.contains("multi") && d.contains("triggered")),
+        "expected the rule's own head to fire once the shared outer bindings and both antecedents are satisfied. Derived: {:?}",
+        decoded
+    );
+}

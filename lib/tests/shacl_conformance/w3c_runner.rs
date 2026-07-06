@@ -31,87 +31,58 @@ use minimal::tripleindex::TripleIndex;
 
 struct Case {
     /// Human-readable test id, matches the vendored file layout.
-    name: &'static str,
+    name: String,
     /// File containing the embedded manifest / expected sh:ValidationReport.
-    meta: &'static str,
+    meta: String,
     /// File to load as the data graph (often == `meta`).
-    data: &'static str,
+    data: String,
     /// File to load as the shapes graph (often == `meta`).
-    shapes: &'static str,
+    shapes: String,
 }
 
-/// The vendored subset, expanded from an initial 23-case pass to add real
-/// depth in `core/property` (previously the most under-represented category
-/// at 4/39 real cases) plus additional `core/node` and a new `core/misc`
-/// category (severity/deactivated/message handling). `core/path` (complex
-/// SPARQL-property-path `sh:path` expressions: sequence/inverse/alternative/
-/// zeroOrMore/etc.) is deliberately NOT vendored here: `shacl.rs` only
-/// supports simple single-predicate `sh:path`, so those cases would either
-/// silently no-op or need real property-path evaluation to be implemented
-/// first -- an honest, documented gap rather than vendoring files that would
-/// sit unwired (see docs/jira/26.7.4/manifests/shacl_manifest.md).
-const CASES: &[Case] = &[
-    Case { name: "node/and-001", meta: "node/and-001.ttl", data: "node/and-001.ttl", shapes: "node/and-001.ttl" },
-    Case { name: "node/and-002", meta: "node/and-002.ttl", data: "node/and-002.ttl", shapes: "node/and-002.ttl" },
-    Case { name: "node/class-001", meta: "node/class-001.ttl", data: "node/class-001.ttl", shapes: "node/class-001.ttl" },
-    Case { name: "node/class-002", meta: "node/class-002.ttl", data: "node/class-002.ttl", shapes: "node/class-002.ttl" },
-    Case { name: "node/class-003", meta: "node/class-003.ttl", data: "node/class-003.ttl", shapes: "node/class-003.ttl" },
-    Case { name: "node/closed-001", meta: "node/closed-001.ttl", data: "node/closed-001.ttl", shapes: "node/closed-001.ttl" },
-    Case { name: "node/closed-002", meta: "node/closed-002.ttl", data: "node/closed-002.ttl", shapes: "node/closed-002.ttl" },
-    Case { name: "node/datatype-001", meta: "node/datatype-001.ttl", data: "node/datatype-001.ttl", shapes: "node/datatype-001.ttl" },
-    Case { name: "node/datatype-002", meta: "node/datatype-002.ttl", data: "node/datatype-002.ttl", shapes: "node/datatype-002.ttl" },
-    Case { name: "node/disjoint-001", meta: "node/disjoint-001.ttl", data: "node/disjoint-001.ttl", shapes: "node/disjoint-001.ttl" },
-    Case { name: "node/equals-001", meta: "node/equals-001.ttl", data: "node/equals-001.ttl", shapes: "node/equals-001.ttl" },
-    Case { name: "node/hasValue-001", meta: "node/hasValue-001.ttl", data: "node/hasValue-001.ttl", shapes: "node/hasValue-001.ttl" },
-    Case { name: "node/in-001", meta: "node/in-001.ttl", data: "node/in-001.ttl", shapes: "node/in-001.ttl" },
-    Case { name: "node/languageIn-001", meta: "node/languageIn-001.ttl", data: "node/languageIn-001.ttl", shapes: "node/languageIn-001.ttl" },
-    Case { name: "node/maxLength-001", meta: "node/maxLength-001.ttl", data: "node/maxLength-001.ttl", shapes: "node/maxLength-001.ttl" },
-    Case { name: "node/minExclusive-001", meta: "node/minExclusive-001.ttl", data: "node/minExclusive-001.ttl", shapes: "node/minExclusive-001.ttl" },
-    Case { name: "node/minInclusive-001", meta: "node/minInclusive-001.ttl", data: "node/minInclusive-001.ttl", shapes: "node/minInclusive-001.ttl" },
-    Case { name: "node/minInclusive-002", meta: "node/minInclusive-002.ttl", data: "node/minInclusive-002.ttl", shapes: "node/minInclusive-002.ttl" },
-    Case { name: "node/minInclusive-003", meta: "node/minInclusive-003.ttl", data: "node/minInclusive-003.ttl", shapes: "node/minInclusive-003.ttl" },
-    Case { name: "node/minLength-001", meta: "node/minLength-001.ttl", data: "node/minLength-001.ttl", shapes: "node/minLength-001.ttl" },
-    Case { name: "node/node-001", meta: "node/node-001.ttl", data: "node/node-001.ttl", shapes: "node/node-001.ttl" },
-    Case { name: "node/nodeKind-001", meta: "node/nodeKind-001.ttl", data: "node/nodeKind-001.ttl", shapes: "node/nodeKind-001.ttl" },
-    Case { name: "node/not-001", meta: "node/not-001.ttl", data: "node/not-001.ttl", shapes: "node/not-001.ttl" },
-    Case { name: "node/not-002", meta: "node/not-002.ttl", data: "node/not-002.ttl", shapes: "node/not-002.ttl" },
-    Case { name: "node/or-001", meta: "node/or-001.ttl", data: "node/or-001.ttl", shapes: "node/or-001.ttl" },
-    Case { name: "node/pattern-001", meta: "node/pattern-001.ttl", data: "node/pattern-001.ttl", shapes: "node/pattern-001.ttl" },
-    Case { name: "node/pattern-002", meta: "node/pattern-002.ttl", data: "node/pattern-002.ttl", shapes: "node/pattern-002.ttl" },
-    Case { name: "node/xone-001", meta: "node/xone-001.ttl", data: "node/xone-001.ttl", shapes: "node/xone-001.ttl" },
-    Case { name: "node/qualified-001", meta: "node/qualified-001.ttl", data: "node/qualified-001-data.ttl", shapes: "node/qualified-001-shapes.ttl" },
-    Case { name: "property/datatype-001", meta: "property/datatype-001.ttl", data: "property/datatype-001.ttl", shapes: "property/datatype-001.ttl" },
-    Case { name: "property/datatype-002", meta: "property/datatype-002.ttl", data: "property/datatype-002.ttl", shapes: "property/datatype-002.ttl" },
-    Case { name: "property/datatype-003", meta: "property/datatype-003.ttl", data: "property/datatype-003.ttl", shapes: "property/datatype-003.ttl" },
-    Case { name: "property/disjoint-001", meta: "property/disjoint-001.ttl", data: "property/disjoint-001.ttl", shapes: "property/disjoint-001.ttl" },
-    Case { name: "property/equals-001", meta: "property/equals-001.ttl", data: "property/equals-001.ttl", shapes: "property/equals-001.ttl" },
-    Case { name: "property/hasValue-001", meta: "property/hasValue-001.ttl", data: "property/hasValue-001.ttl", shapes: "property/hasValue-001.ttl" },
-    Case { name: "property/in-001", meta: "property/in-001.ttl", data: "property/in-001.ttl", shapes: "property/in-001.ttl" },
-    Case { name: "property/minCount-001", meta: "property/minCount-001.ttl", data: "property/minCount-001.ttl", shapes: "property/minCount-001.ttl" },
-    Case { name: "property/minCount-002", meta: "property/minCount-002.ttl", data: "property/minCount-002.ttl", shapes: "property/minCount-002.ttl" },
-    Case { name: "property/maxCount-001", meta: "property/maxCount-001.ttl", data: "property/maxCount-001.ttl", shapes: "property/maxCount-001.ttl" },
-    Case { name: "property/maxCount-002", meta: "property/maxCount-002.ttl", data: "property/maxCount-002.ttl", shapes: "property/maxCount-002.ttl" },
-    Case { name: "property/maxExclusive-001", meta: "property/maxExclusive-001.ttl", data: "property/maxExclusive-001.ttl", shapes: "property/maxExclusive-001.ttl" },
-    Case { name: "property/maxInclusive-001", meta: "property/maxInclusive-001.ttl", data: "property/maxInclusive-001.ttl", shapes: "property/maxInclusive-001.ttl" },
-    Case { name: "property/minExclusive-002", meta: "property/minExclusive-002.ttl", data: "property/minExclusive-002.ttl", shapes: "property/minExclusive-002.ttl" },
-    Case { name: "property/minLength-001", meta: "property/minLength-001.ttl", data: "property/minLength-001.ttl", shapes: "property/minLength-001.ttl" },
-    Case { name: "property/node-001", meta: "property/node-001.ttl", data: "property/node-001.ttl", shapes: "property/node-001.ttl" },
-    Case { name: "property/not-001", meta: "property/not-001.ttl", data: "property/not-001.ttl", shapes: "property/not-001.ttl" },
-    Case { name: "property/or-001", meta: "property/or-001.ttl", data: "property/or-001.ttl", shapes: "property/or-001.ttl" },
-    Case { name: "property/pattern-001", meta: "property/pattern-001.ttl", data: "property/pattern-001.ttl", shapes: "property/pattern-001.ttl" },
-    Case { name: "property/property-001", meta: "property/property-001.ttl", data: "property/property-001.ttl", shapes: "property/property-001.ttl" },
-    Case { name: "property/lessThan-001", meta: "property/lessThan-001.ttl", data: "property/lessThan-001.ttl", shapes: "property/lessThan-001.ttl" },
-    Case { name: "property/lessThan-002", meta: "property/lessThan-002.ttl", data: "property/lessThan-002.ttl", shapes: "property/lessThan-002.ttl" },
-    Case { name: "property/lessThanOrEquals-001", meta: "property/lessThanOrEquals-001.ttl", data: "property/lessThanOrEquals-001.ttl", shapes: "property/lessThanOrEquals-001.ttl" },
-    Case { name: "property/uniqueLang-001", meta: "property/uniqueLang-001.ttl", data: "property/uniqueLang-001.ttl", shapes: "property/uniqueLang-001.ttl" },
-    Case { name: "targets/targetClass-001", meta: "targets/targetClass-001.ttl", data: "targets/targetClass-001.ttl", shapes: "targets/targetClass-001.ttl" },
-    Case { name: "targets/targetNode-001", meta: "targets/targetNode-001.ttl", data: "targets/targetNode-001.ttl", shapes: "targets/targetNode-001.ttl" },
-    Case { name: "misc/deactivated-001", meta: "misc/deactivated-001.ttl", data: "misc/deactivated-001.ttl", shapes: "misc/deactivated-001.ttl" },
-    Case { name: "misc/deactivated-002", meta: "misc/deactivated-002.ttl", data: "misc/deactivated-002.ttl", shapes: "misc/deactivated-002.ttl" },
-    Case { name: "misc/message-001", meta: "misc/message-001.ttl", data: "misc/message-001.ttl", shapes: "misc/message-001.ttl" },
-    Case { name: "misc/severity-001", meta: "misc/severity-001.ttl", data: "misc/severity-001.ttl", shapes: "misc/severity-001.ttl" },
-    Case { name: "misc/severity-002", meta: "misc/severity-002.ttl", data: "misc/severity-002.ttl", shapes: "misc/severity-002.ttl" },
-];
+/// Discover every vendored case by scanning `w3c_suite/` at test-run time,
+/// rather than a hand-maintained list that can silently omit a newly-added
+/// fixture (the failure mode a hardcoded list has no defense against). The
+/// vendored layout (confirmed by inspection) is: each self-contained case is
+/// a single `<name>.ttl` combining data/shapes/expected-report; the one split
+/// case (`node/qualified-001`) additionally has sibling `<name>-data.ttl` /
+/// `<name>-shapes.ttl` files, which we detect by suffix and pair up. Files
+/// literally named `*-data.ttl` / `*-shapes.ttl` are never treated as their
+/// own top-level case (they're referenced from their `<name>.ttl` sibling).
+fn discover_cases(dir: &Path) -> Vec<Case> {
+    let mut cases = Vec::new();
+    for category in ["node", "property", "targets", "misc", "path"] {
+        let category_dir = dir.join(category);
+        let Ok(entries) = fs::read_dir(&category_dir) else { continue };
+        let mut file_names: Vec<String> = entries
+            .filter_map(|e| e.ok())
+            .filter_map(|e| e.file_name().into_string().ok())
+            .filter(|n| n.ends_with(".ttl"))
+            .collect();
+        file_names.sort();
+
+        for file_name in &file_names {
+            if file_name.ends_with("-data.ttl") || file_name.ends_with("-shapes.ttl") {
+                continue; // referenced from its `<name>.ttl` sibling, not a case on its own
+            }
+            let stem = file_name.strip_suffix(".ttl").unwrap();
+            let data_sibling = format!("{stem}-data.ttl");
+            let shapes_sibling = format!("{stem}-shapes.ttl");
+            let (data, shapes) = if file_names.contains(&data_sibling) && file_names.contains(&shapes_sibling) {
+                (format!("{category}/{data_sibling}"), format!("{category}/{shapes_sibling}"))
+            } else {
+                (format!("{category}/{file_name}"), format!("{category}/{file_name}"))
+            };
+            cases.push(Case {
+                name: format!("{category}/{stem}"),
+                meta: format!("{category}/{file_name}"),
+                data,
+                shapes,
+            });
+        }
+    }
+    cases
+}
 
 fn suite_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/shacl_conformance/w3c_suite")
@@ -196,7 +167,7 @@ fn expected_from_manifest(content: &str) -> (bool, usize) {
 }
 
 struct CaseOutcome {
-    name: &'static str,
+    name: String,
     passed: bool,
     detail: String,
 }
@@ -204,29 +175,31 @@ struct CaseOutcome {
 #[test]
 fn test_w3c_core_constraint_component_suite() {
     let dir = suite_dir();
-    let mut outcomes = Vec::with_capacity(CASES.len());
+    let cases = discover_cases(&dir);
+    assert!(!cases.is_empty(), "no vendored SHACL conformance cases found under {}", dir.display());
+    let mut outcomes = Vec::with_capacity(cases.len());
 
-    for case in CASES {
-        let meta_path = dir.join(case.meta);
+    for case in &cases {
+        let meta_path = dir.join(&case.meta);
         let meta_content = fs::read_to_string(&meta_path)
             .unwrap_or_else(|e| panic!("missing vendored file {}: {e}", meta_path.display()));
 
         let data_content = if case.data == case.meta {
             meta_content.clone()
         } else {
-            fs::read_to_string(dir.join(case.data)).unwrap_or_else(|e| panic!("missing {}: {e}", case.data))
+            fs::read_to_string(dir.join(&case.data)).unwrap_or_else(|e| panic!("missing {}: {e}", case.data))
         };
         let shapes_content = if case.shapes == case.meta {
             meta_content.clone()
         } else if case.shapes == case.data {
             data_content.clone()
         } else {
-            fs::read_to_string(dir.join(case.shapes)).unwrap_or_else(|e| panic!("missing {}: {e}", case.shapes))
+            fs::read_to_string(dir.join(&case.shapes)).unwrap_or_else(|e| panic!("missing {}: {e}", case.shapes))
         };
 
         let (expected_conforms, expected_violations) = expected_from_manifest(&meta_content);
 
-        let data_index = build_index(&data_content, case.data);
+        let data_index = build_index(&data_content, &case.data);
         let shapes = ShapesGraph::parse(&resolve_relative_self_refs(&shapes_content))
             .unwrap_or_else(|e| panic!("failed to parse vendored shapes {}: {e}", case.shapes));
         let report = Validator::validate(&data_index, &shapes);
@@ -234,7 +207,7 @@ fn test_w3c_core_constraint_component_suite() {
         let actual_violations = report.results.len();
         let passed = report.conforms == expected_conforms && actual_violations == expected_violations;
         outcomes.push(CaseOutcome {
-            name: case.name,
+            name: case.name.clone(),
             passed,
             detail: format!(
                 "expected conforms={expected_conforms} violations={expected_violations}, got conforms={} violations={actual_violations}",
@@ -270,7 +243,7 @@ fn write_manifest_report(total: usize, passed: usize, outcomes: &[CaseOutcome]) 
     report.push_str("- **Dialect**: SHACL\n");
     report.push_str("- **Suite**: W3C data-shapes Test Suite (vendored core-constraint-component subset: node/, property/, targets/, misc/)\n");
     report.push_str("- **Source**: https://github.com/w3c/data-shapes/tree/gh-pages/data-shapes-test-suite/tests/core\n");
-    report.push_str("- **Coverage note**: `core/path/` (complex SPARQL-property-path `sh:path` expressions -- sequence/inverse/alternative/zeroOrMore/etc.) is NOT vendored: `shacl.rs` only supports simple single-predicate `sh:path`, so those ~17 real cases are an honest, documented gap, not silently dropped.\n");
+    report.push_str("- **Coverage note**: `shacl.rs`'s `eval_path` supports sequence/inverse/alternative/zeroOrMore/oneOrMore/zeroOrOne property paths (see `core/path/` cases below); cases are discovered by scanning `w3c_suite/` at test-run time (see `discover_cases`), so this manifest always reflects exactly what's vendored -- no case can be silently un-wired.\n");
     report.push_str(&format!("- **Total Tests**: {total}\n"));
     report.push_str(&format!("- **Passed**: {passed}\n"));
     report.push_str(&format!("- **Failed**: {failed}\n"));

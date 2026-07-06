@@ -6,7 +6,7 @@ SHACL (Shapes Constraint Language) is a W3C Recommendation for validating RDF gr
 
 SHACL is essential for enforcing schema invariants, datatypes, cardinalities, and custom constraints in enterprise knowledge graphs.
 
-In Roxi, the SHACL engine validates the target graph against a shapes graph. It leverages the `rudof` validation library through the `oxrdf` zero-copy adapter, ensuring high-performance validation directly on Roxi's core memory indexes.
+In Roxi, the SHACL engine (`lib/src/shacl.rs`) is a fully native implementation -- no external SHACL validation library is used. It operates directly on Roxi's `TripleIndex` with no intermediate graph-conversion step, parsing the shapes graph itself (`ShapesGraph::parse`) and validating focus nodes directly against it (`Validator::validate`).
 
 ---
 
@@ -82,70 +82,33 @@ For complex validation rules that cannot be expressed using core SHACL constrain
 
 ## 5. Rust Integration Reference
 
-Below is the Rust structural design of the validation loop and report generation in Roxi:
+The real public entry point, from `lib/src/lib.rs` and `lib/src/shacl.rs`:
 
 ```rust
-use std::collections::HashSet;
-
-pub struct ValidationViolation {
-    pub focus_node: String,
-    pub path: Option<String>,
-    pub message: String,
-    pub severity: String,
+impl TripleStore {
+    /// Parses `shapes_turtle` as a SHACL shapes graph and validates
+    /// this store's data against it.
+    pub fn validate_shacl(&self, shapes_turtle: &str) -> Result<shacl::ValidationReport, String>;
 }
 
-pub struct SHACLReport {
+pub struct ValidationReport {
     pub conforms: bool,
-    pub results: Vec<ValidationViolation>,
+    pub results: Vec<ValidationResult>,
 }
 
-pub struct SHACLValidator {
-    // Shapes and data graphs
+impl ValidationReport {
+    /// Serializes this report as a real `sh:ValidationReport` RDF graph
+    /// (a `Vec<Triple>`), per the SHACL spec's own vocabulary for reports.
+    pub fn to_triples(&self) -> Vec<Triple>;
 }
 
-impl SHACLValidator {
-    /// Validates focus nodes against minCount and maxCount constraints
-    pub fn validate_property_cardinality(
-        &self,
-        focus_nodes: &[usize],
-        predicate: usize,
-        min_count: Option<usize>,
-        max_count: Option<usize>,
-        index: &roxi::tripleindex::TripleIndex,
-    ) -> SHACLReport {
-        let mut violations = Vec::new();
-
-        for &node in focus_nodes {
-            // Count matching triples: (?this, predicate, ?val)
-            let match_count = index.count_matching_subjects(node, predicate);
-
-            if let Some(min) = min_count {
-                if match_count < min {
-                    violations.push(ValidationViolation {
-                        focus_node: format!("node_{}", node),
-                        path: Some(format!("predicate_{}", predicate)),
-                        message: format!("Property count {} is less than minimum {}.", match_count, min),
-                        severity: "sh:Violation".to_string(),
-                    });
-                }
-            }
-
-            if let Some(max) = max_count {
-                if match_count > max {
-                    violations.push(ValidationViolation {
-                        focus_node: format!("node_{}", node),
-                        path: Some(format!("predicate_{}", predicate)),
-                        message: format!("Property count {} exceeds maximum {}.", match_count, max),
-                        severity: "sh:Violation".to_string(),
-                    });
-                }
-            }
-        }
-
-        SHACLReport {
-            conforms: violations.is_empty(),
-            results: violations,
-        }
-    }
+pub struct ValidationResult {
+    pub focus_node: Term,
+    pub result_path: Option<Term>,
+    pub value: Option<Term>,
+    pub source_constraint_component: Term,
+    pub source_shape: Term,
+    pub severity: Term,
+    pub message: Option<String>,
 }
 ```

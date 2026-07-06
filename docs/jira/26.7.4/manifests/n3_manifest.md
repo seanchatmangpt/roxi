@@ -2,8 +2,8 @@
 
 - **Dialect**: Notation3 (N3)
 - **Suite**: hand-authored syntax/builtins cases plus two vendored EYE reasoner cases (see lib/tests/n3_conformance/README.md)
-- **Total Tests**: 95
-- **Passed**: 95
+- **Total Tests**: 100
+- **Passed**: 100
 - **Failed**: 0
 - **Pass Rate**: 100.0%
 
@@ -106,3 +106,8 @@
 | vendored_filter | Vendored EYE Reasoner Cases | PASSED | all 2 expected triple(s) derived, 0 denial violations |
 | vendored_basic_monadic | Vendored EYE Reasoner Cases | PASSED | all 1 expected triple(s) derived, 0 denial violations |
 | vendored_edt | Vendored EYE Reasoner Cases | PASSED | all 1 expected triple(s) derived, 0 denial violations |
+| vendored_entail | Vendored EYE Reasoner Cases | PASSED | all 1 expected triple(s) derived, 0 denial violations |
+| vendored_defeasable_logic | Vendored EYE Reasoner Cases | PASSED | all 2 expected triple(s) derived, 0 denial violations |
+| vendored_backward_more | Vendored EYE Reasoner Cases | PASSED | all 4 expected triple(s) derived, 0 denial violations |
+| vendored_restpath | Vendored EYE Reasoner Cases | PASSED | all 1 expected triple(s) derived, 0 denial violations |
+| vendored_graph | Vendored EYE Reasoner Cases | PASSED | all 5 expected triple(s) derived, 0 denial violations |
